@@ -1,9 +1,17 @@
 use std::fmt;
 
-#[derive(Debug)]
 enum ObjectiveSense {
     Min,
     Max,
+}
+
+impl fmt::Display for ObjectiveSense {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            ObjectiveSense::Min => write!(f, "Min"),
+            ObjectiveSense::Max => write!(f, "Max"),
+        }
+    }
 }
 
 struct NlpInfo {
@@ -26,7 +34,7 @@ impl fmt::Display for NlpInfo {
             "number of equality constraints: {}",
             self.num_equality_constraints
         )?;
-        writeln!(f, "objective sense: {:?}", self.sense)
+        writeln!(f, "objective sense: {}", self.sense)
     }
 }
 
