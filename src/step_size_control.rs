@@ -53,6 +53,6 @@ impl StepSizeControl for ArmijoGoldsteinRule {
             *x_i = *x_step_i;
         }
 
-        alpha_j
+        f_x
     }
 }

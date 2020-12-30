@@ -1,4 +1,4 @@
-use crate::UnconstrainedNlp;
+use crate::{vec_utils, ObjectiveSense, UnconstrainedNlp};
 
 #[allow(dead_code)]
 pub struct OptContext {
@@ -26,24 +26,25 @@ impl<Nlp: UnconstrainedNlp> Optimizer<Nlp> for SteepestDescent {
 
         OptContext {
             iteration: 0,
-            x_current: vec![0.0; nlp_info.num_variables as usize],
+            x_current: vec![1.0; nlp_info.num_variables as usize],
             x_previous: vec![0.0; nlp_info.num_variables as usize],
             objective_current: 0.0,
             objective_previous: 0.0,
-            objective_grad: vec![0.0; nlp_info.num_variables as usize],
+            objective_grad: vec![f64::INFINITY; nlp_info.num_variables as usize],
         }
     }
 
     fn iterate(&self, nlp: &Nlp, context: &mut OptContext) -> StepDirection {
         let nlp_info = nlp.info();
 
-        context.iteration += 1;
-
-        vec![1.3; nlp_info.num_variables as usize]
+        match nlp_info.sense {
+            ObjectiveSense::Min => vec_utils::scaled(&context.objective_grad, -1.0),
+            ObjectiveSense::Max => context.objective_grad.clone(),
+        }
     }
 
     fn done(&self, context: &OptContext) -> bool {
-        context.iteration >= 10
+        vec_utils::norm2(&context.objective_grad) < 1.0E-8
     }
 }
 

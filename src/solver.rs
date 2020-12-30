@@ -26,13 +26,17 @@ where
         let mut context = self.optimizer.initialize(&self.nlp);
 
         while !self.optimizer.done(&context) {
-            let d = self.optimizer.iterate(self.nlp, &mut context);
-            let grad_obj = self.nlp.grad_objective(&context.x_current);
+            context.objective_previous = context.objective_current;
+            context.x_previous = context.x_current.clone();
+            context.iteration += 1;
+            context.objective_grad = self.nlp.grad_objective(&context.x_current);
 
-            self.step_size_control.do_step(
+            let d = self.optimizer.iterate(self.nlp, &mut context);
+
+            context.objective_current = self.step_size_control.do_step(
                 |xs| self.nlp.objective(xs),
                 &mut context.x_current,
-                &grad_obj,
+                &context.objective_grad,
                 &d,
             );
         }
