@@ -1,21 +1,42 @@
-use crate::{ConstrainedNlp, UnconstrainedNlp};
+use crate::UnconstrainedNlp;
 
 #[allow(dead_code)]
-struct OptContext {
-    iteration: u32,
-    x_current: Vec<f64>,
-    x_previous: Vec<f64>,
-    objective_current: f64,
-    objective_previous: f64,
-    objective_grad: Vec<f64>,
+pub struct OptContext {
+    pub iteration: u32,
+    pub x_current: Vec<f64>,
+    pub x_previous: Vec<f64>,
+    pub objective_current: f64,
+    pub objective_previous: f64,
+    pub objective_grad: Vec<f64>,
 }
 
-trait Optimizer {
-    type Nlp: UnconstrainedNlp + ConstrainedNlp;
+pub trait Optimizer<Nlp: UnconstrainedNlp> {
+    fn initialize(&self, nlp: &Nlp) -> OptContext;
+    fn iterate(&self, nlp: &Nlp, context: &mut OptContext);
+    fn done(&self, context: &OptContext) -> bool;
+}
 
-    fn initialize(nlp: &Self::Nlp) -> &mut OptContext;
-    fn iterate(nlp: &Self::Nlp, context: &mut OptContext);
-    fn done(context: &OptContext) -> bool;
+pub struct SteepestDescent {}
+
+impl<Nlp: UnconstrainedNlp> Optimizer<Nlp> for SteepestDescent {
+    fn initialize(&self, _nlp: &Nlp) -> OptContext {
+        OptContext {
+            iteration: 0,
+            x_current: vec![],
+            x_previous: vec![],
+            objective_current: 0.0,
+            objective_previous: 0.0,
+            objective_grad: vec![],
+        }
+    }
+
+    fn iterate(&self, _nlp: &Nlp, context: &mut OptContext) {
+        context.iteration += 1;
+    }
+
+    fn done(&self, context: &OptContext) -> bool {
+        context.iteration >= 10
+    }
 }
 
 #[cfg(test)]
