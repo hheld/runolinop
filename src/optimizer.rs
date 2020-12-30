@@ -10,28 +10,36 @@ pub struct OptContext {
     pub objective_grad: Vec<f64>,
 }
 
+pub type StepDirection = Vec<f64>;
+
 pub trait Optimizer<Nlp: UnconstrainedNlp> {
     fn initialize(&self, nlp: &Nlp) -> OptContext;
-    fn iterate(&self, nlp: &Nlp, context: &mut OptContext);
+    fn iterate(&self, nlp: &Nlp, context: &mut OptContext) -> StepDirection;
     fn done(&self, context: &OptContext) -> bool;
 }
 
 pub struct SteepestDescent {}
 
 impl<Nlp: UnconstrainedNlp> Optimizer<Nlp> for SteepestDescent {
-    fn initialize(&self, _nlp: &Nlp) -> OptContext {
+    fn initialize(&self, nlp: &Nlp) -> OptContext {
+        let nlp_info = nlp.info();
+
         OptContext {
             iteration: 0,
-            x_current: vec![],
-            x_previous: vec![],
+            x_current: vec![0.0; nlp_info.num_variables as usize],
+            x_previous: vec![0.0; nlp_info.num_variables as usize],
             objective_current: 0.0,
             objective_previous: 0.0,
-            objective_grad: vec![],
+            objective_grad: vec![0.0; nlp_info.num_variables as usize],
         }
     }
 
-    fn iterate(&self, _nlp: &Nlp, context: &mut OptContext) {
+    fn iterate(&self, nlp: &Nlp, context: &mut OptContext) -> StepDirection {
+        let nlp_info = nlp.info();
+
         context.iteration += 1;
+
+        vec![1.3; nlp_info.num_variables as usize]
     }
 
     fn done(&self, context: &OptContext) -> bool {

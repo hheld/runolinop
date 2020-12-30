@@ -1,9 +1,13 @@
 use crate::vec_utils::*;
 
 pub trait StepSizeControl {
-    type F: Fn(&[f64]) -> f64;
-
-    fn do_step(&self, f: &Self::F, x: &mut [f64], grad_f: &[f64], direction: &[f64]) -> f64;
+    fn do_step(
+        &self,
+        f: impl Fn(&[f64]) -> f64,
+        x: &mut [f64],
+        grad_f: &[f64],
+        direction: &[f64],
+    ) -> f64;
 }
 
 pub struct ArmijoGoldsteinRule {
@@ -24,9 +28,13 @@ impl ArmijoGoldsteinRule {
 }
 
 impl StepSizeControl for ArmijoGoldsteinRule {
-    type F = Box<dyn Fn(&[f64]) -> f64>;
-
-    fn do_step(&self, f: &Self::F, x: &mut [f64], grad_f: &[f64], direction: &[f64]) -> f64 {
+    fn do_step(
+        &self,
+        f: impl Fn(&[f64]) -> f64,
+        x: &mut [f64],
+        grad_f: &[f64],
+        direction: &[f64],
+    ) -> f64 {
         let m = inner_product(grad_f, direction).unwrap();
         let t = -self.c * m;
 
