@@ -68,7 +68,7 @@ pub fn dump_unconstrained_nlp(nlp: &dyn UnconstrainedNlp) {
     }
 }
 
-trait ConstrainedNlp: UnconstrainedNlp {
+pub trait ConstrainedNlp: UnconstrainedNlp {
     fn equality_constraints(xs: &[f64]) -> Vec<f64>;
     fn grad_equality_constraints(xs: &[f64]) -> Vec<Vec<f64>>;
 
