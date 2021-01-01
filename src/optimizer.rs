@@ -24,11 +24,10 @@ impl<Nlp: UnconstrainedNlp> Optimizer<Nlp> for SteepestDescent {
     fn initialize(&self, nlp: &Nlp) -> OptContext {
         let nlp_info = nlp.info();
 
-        // @todo initialize according to variable bounds here
         OptContext {
             iteration: 0,
-            x_current: vec![1.5; nlp_info.num_variables as usize],
-            x_previous: vec![0.0; nlp_info.num_variables as usize],
+            x_current: nlp.initial_guess(),
+            x_previous: nlp.initial_guess(),
             objective_current: 0.0,
             objective_previous: match nlp_info.sense {
                 ObjectiveSense::Min => f64::INFINITY,
@@ -48,7 +47,7 @@ impl<Nlp: UnconstrainedNlp> Optimizer<Nlp> for SteepestDescent {
     }
 
     fn done(&self, context: &OptContext) -> bool {
-        (context.objective_current - context.objective_previous).abs() < 1.0E-10
+        (context.objective_current - context.objective_previous).abs() < 1.0E-9
     }
 }
 
