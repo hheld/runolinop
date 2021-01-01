@@ -165,7 +165,7 @@ mod tests {
     }
 
     #[test]
-    fn max_unconstrained_steepeset_descent() {
+    fn max_unconstrained_steepset_descent() {
         let step_rule = ArmijoGoldsteinRule::new(1., 0.95, 0.01);
 
         struct MinXSquared {
