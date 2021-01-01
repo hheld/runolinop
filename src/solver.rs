@@ -24,21 +24,62 @@ where
     #[allow(dead_code)]
     fn solve(&self) -> Solution {
         let mut context = self.optimizer.initialize(&self.nlp);
+        let mut barrier_parameter = 1.0E-6;
+        let barrier_increase_factor = 1.01;
+        let bounds = self.nlp.bounds();
 
         while !self.optimizer.done(&context) {
             context.objective_previous = context.objective_current;
             context.x_previous = context.x_current.clone();
             context.iteration += 1;
-            context.objective_grad = self.nlp.grad_objective(&context.x_current);
+            context.objective_grad = self
+                .nlp
+                .grad_objective(&context.x_current)
+                .iter()
+                .zip(bounds.iter())
+                .zip(context.x_current.iter())
+                .map(|((grad_obj, bounds), x)| {
+                    let mut grad_barrier_term = 0.0;
+
+                    if bounds.lb > f64::NEG_INFINITY {
+                        grad_barrier_term += barrier_parameter * (1.0 / (x - bounds.lb));
+                    }
+
+                    if bounds.ub < f64::INFINITY {
+                        grad_barrier_term -= barrier_parameter * (1.0 / (bounds.ub - x));
+                    }
+
+                    grad_obj - grad_barrier_term
+                })
+                .collect();
 
             let d = self.optimizer.iterate(self.nlp, &mut context);
 
             context.objective_current = self.step_size_control.do_step(
-                |xs| self.nlp.objective(xs),
+                |xs| {
+                    self.nlp.objective(xs)
+                        + xs.iter().zip(bounds.iter()).fold(0.0, |sum, (x, bounds)| {
+                            let mut barrier_term = 0.0;
+
+                            if bounds.lb > f64::NEG_INFINITY {
+                                barrier_term += barrier_parameter * (x - bounds.lb).ln();
+                            }
+
+                            if bounds.ub < f64::INFINITY {
+                                barrier_term += barrier_parameter * (bounds.ub - x).ln();
+                            }
+
+                            sum - barrier_term
+                        })
+                },
                 &mut context.x_current,
                 &context.objective_grad,
                 &d,
             );
+
+            if context.iteration % 100 == 0 {
+                barrier_parameter *= barrier_increase_factor;
+            }
         }
 
         Solution {
