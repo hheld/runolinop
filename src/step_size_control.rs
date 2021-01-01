@@ -1,4 +1,5 @@
 use crate::vec_utils::*;
+use crate::ObjectiveSense;
 
 pub trait StepSizeControl {
     fn do_step(
@@ -7,6 +8,7 @@ pub trait StepSizeControl {
         x: &mut [f64],
         grad_f: &[f64],
         direction: &[f64],
+        sense: &ObjectiveSense,
     ) -> f64;
 }
 
@@ -34,6 +36,7 @@ impl StepSizeControl for ArmijoGoldsteinRule {
         x: &mut [f64],
         grad_f: &[f64],
         direction: &[f64],
+        sense: &ObjectiveSense,
     ) -> f64 {
         let m = inner_product(grad_f, direction).unwrap();
         let t = -self.c * m;
@@ -50,7 +53,10 @@ impl StepSizeControl for ArmijoGoldsteinRule {
             f_x_step = f(&x_step);
         }
 
-        while f_x - f_x_step < alpha_j * t {
+        while match sense {
+            ObjectiveSense::Min => f_x - f_x_step < alpha_j * t,
+            ObjectiveSense::Max => f_x - f_x_step > alpha_j * t,
+        } {
             alpha_j *= self.tau;
             x_step = add(&x, &scaled(direction, alpha_j)).unwrap();
             f_x_step = f(&x_step);

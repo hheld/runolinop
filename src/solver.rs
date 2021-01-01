@@ -75,6 +75,7 @@ where
                 &mut context.x_current,
                 &context.objective_grad,
                 &d,
+                &self.nlp.info().sense,
             );
 
             barrier_parameter *= barrier_decrease_factor;
@@ -111,7 +112,7 @@ mod tests {
     use crate::{NlpInfo, ObjectiveSense, VariableBounds};
 
     #[test]
-    fn construct_unconstrained_solver() {
+    fn min_unconstrained_steepeset_descent() {
         let step_rule = ArmijoGoldsteinRule::new(1., 0.95, 0.01);
 
         struct MinXSquared {
@@ -133,10 +134,7 @@ mod tests {
             }
 
             fn bounds(&self) -> Vec<VariableBounds> {
-                vec![VariableBounds {
-                    lb: 1.1,
-                    ub: f64::INFINITY,
-                }]
+                vec![VariableBounds { lb: 1.1, ub: 3.213 }]
             }
 
             fn objective(&self, xs: &[f64]) -> f64 {
@@ -163,5 +161,59 @@ mod tests {
         let solution = solver.solve();
 
         println!("solution: {}", solution);
+        assert!((solution.best_solution[0] - nlp.bounds()[0].lb).abs() < 1.0E-8);
+    }
+
+    #[test]
+    fn max_unconstrained_steepeset_descent() {
+        let step_rule = ArmijoGoldsteinRule::new(1., 0.95, 0.01);
+
+        struct MinXSquared {
+            info: NlpInfo,
+        };
+
+        let nlp = MinXSquared {
+            info: NlpInfo {
+                num_variables: 1,
+                num_inequality_constraints: 0,
+                num_equality_constraints: 0,
+                sense: ObjectiveSense::Max,
+            },
+        };
+
+        impl UnconstrainedNlp for MinXSquared {
+            fn info(&self) -> &NlpInfo {
+                &self.info
+            }
+
+            fn bounds(&self) -> Vec<VariableBounds> {
+                vec![VariableBounds { lb: 1.1, ub: 3.213 }]
+            }
+
+            fn objective(&self, xs: &[f64]) -> f64 {
+                xs[0].powi(2)
+            }
+
+            fn grad_objective(&self, xs: &[f64]) -> Vec<f64> {
+                vec![2.0 * xs[0]]
+            }
+
+            fn initial_guess(&self) -> Vec<f64> {
+                vec![2.0]
+            }
+        }
+
+        let optimizer = SteepestDescent {};
+
+        let solver = UnconstrainedSolver {
+            nlp: &nlp,
+            step_size_control: &step_rule,
+            optimizer: &optimizer,
+        };
+
+        let solution = solver.solve();
+
+        println!("solution: {}", solution);
+        assert!((solution.best_solution[0] - nlp.bounds()[0].ub).abs() < 1.0E-8);
     }
 }
