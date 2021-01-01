@@ -112,7 +112,7 @@ mod tests {
     use crate::{NlpInfo, ObjectiveSense, VariableBounds};
 
     #[test]
-    fn min_unconstrained_steepeset_descent() {
+    fn min_unconstrained_steepest_descent() {
         let step_rule = ArmijoGoldsteinRule::new(1., 0.95, 0.01);
 
         struct MinXSquared {
@@ -165,7 +165,7 @@ mod tests {
     }
 
     #[test]
-    fn max_unconstrained_steepset_descent() {
+    fn max_unconstrained_steepest_descent() {
         let step_rule = ArmijoGoldsteinRule::new(1., 0.95, 0.01);
 
         struct MinXSquared {
