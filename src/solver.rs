@@ -24,8 +24,8 @@ where
     #[allow(dead_code)]
     fn solve(&self) -> Solution {
         let mut context = self.optimizer.initialize(&self.nlp);
-        let mut barrier_parameter = 1.0E-1;
-        let barrier_decrease_factor = 0.99;
+        let mut barrier_parameter = 1.0E-6;
+        let barrier_decrease_factor = 0.5;
         let bounds = self.nlp.bounds();
 
         while !self.optimizer.done(&context) {
@@ -66,7 +66,7 @@ where
                             }
 
                             if bounds.ub < f64::INFINITY {
-                                barrier_term += barrier_parameter * (bounds.ub - x).ln();
+                                barrier_term -= barrier_parameter * (bounds.ub - x).ln();
                             }
 
                             sum - barrier_term

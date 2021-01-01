@@ -48,7 +48,7 @@ impl<Nlp: UnconstrainedNlp> Optimizer<Nlp> for SteepestDescent {
     }
 
     fn done(&self, context: &OptContext) -> bool {
-        vec_utils::norm2(&context.objective_grad) < 1.0E-6
+        (context.objective_current - context.objective_previous).abs() < 1.0E-10
     }
 }
 
