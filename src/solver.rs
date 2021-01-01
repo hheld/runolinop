@@ -24,8 +24,8 @@ where
     #[allow(dead_code)]
     fn solve(&self) -> Solution {
         let mut context = self.optimizer.initialize(&self.nlp);
-        let mut barrier_parameter = 1.0E-6;
-        let barrier_increase_factor = 1.01;
+        let mut barrier_parameter = 1.0E-1;
+        let barrier_decrease_factor = 0.99;
         let bounds = self.nlp.bounds();
 
         while !self.optimizer.done(&context) {
@@ -77,9 +77,7 @@ where
                 &d,
             );
 
-            if context.iteration % 100 == 0 {
-                barrier_parameter *= barrier_increase_factor;
-            }
+            barrier_parameter *= barrier_decrease_factor;
         }
 
         Solution {
