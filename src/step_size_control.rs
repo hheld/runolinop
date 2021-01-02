@@ -60,7 +60,7 @@ impl StepSizeControl for ArmijoGoldsteinRule {
 
         while match sense {
             ObjectiveSense::Min => f_x - f_x_step < alpha_j * t,
-            ObjectiveSense::Max => f_x - f_x_step > alpha_j * t,
+            ObjectiveSense::Max => f_x - f_x_step > -alpha_j * t,
         } {
             alpha_j *= self.tau;
             x_step = add(&x, &scaled(direction, alpha_j)).unwrap();
