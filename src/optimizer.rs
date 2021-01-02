@@ -1,4 +1,4 @@
-use crate::{vec_utils, ObjectiveSense, UnconstrainedNlp};
+use crate::{vec_utils, ObjectiveSense, NLP};
 
 #[allow(dead_code)]
 pub struct OptContext {
@@ -12,7 +12,7 @@ pub struct OptContext {
 
 pub type StepDirection = Vec<f64>;
 
-pub trait Optimizer<Nlp: UnconstrainedNlp> {
+pub trait Optimizer<Nlp: NLP> {
     fn initialize(&self, nlp: &Nlp) -> OptContext;
     fn iterate(&self, nlp: &Nlp, context: &mut OptContext) -> StepDirection;
     fn done(&self, context: &OptContext) -> bool;
@@ -20,7 +20,7 @@ pub trait Optimizer<Nlp: UnconstrainedNlp> {
 
 pub struct SteepestDescent {}
 
-impl<Nlp: UnconstrainedNlp> Optimizer<Nlp> for SteepestDescent {
+impl<Nlp: NLP> Optimizer<Nlp> for SteepestDescent {
     fn initialize(&self, nlp: &Nlp) -> OptContext {
         let nlp_info = nlp.info();
 

@@ -1,12 +1,12 @@
 use crate::optimizer::Optimizer;
 use crate::step_size_control::StepSizeControl;
-use crate::UnconstrainedNlp;
+use crate::NLP;
 use std::fmt;
 
 #[allow(dead_code)]
 struct UnconstrainedSolver<'a, N, S, O>
 where
-    N: UnconstrainedNlp,
+    N: NLP,
     S: StepSizeControl,
     O: Optimizer<N>,
 {
@@ -17,7 +17,7 @@ where
 
 impl<N, S, O> UnconstrainedSolver<'_, N, S, O>
 where
-    N: UnconstrainedNlp,
+    N: NLP,
     S: StepSizeControl,
     O: Optimizer<N>,
 {
@@ -128,7 +128,7 @@ mod tests {
             },
         };
 
-        impl UnconstrainedNlp for MinXSquared {
+        impl NLP for MinXSquared {
             fn info(&self) -> &NlpInfo {
                 &self.info
             }
@@ -181,7 +181,7 @@ mod tests {
             },
         };
 
-        impl UnconstrainedNlp for MinXSquared {
+        impl NLP for MinXSquared {
             fn info(&self) -> &NlpInfo {
                 &self.info
             }

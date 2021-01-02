@@ -4,7 +4,4 @@ mod solver;
 mod step_size_control;
 mod vec_utils;
 
-pub use nlp::{
-    dump_unconstrained_nlp, ConstrainedNlp, NlpInfo, ObjectiveSense, UnconstrainedNlp,
-    VariableBounds,
-};
+pub use nlp::{dump_nlp, NlpInfo, ObjectiveSense, VariableBounds, NLP};

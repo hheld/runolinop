@@ -15,7 +15,7 @@ fn nlp_definition() {
         },
     };
 
-    impl UnconstrainedNlp for MinXSquared {
+    impl NLP for MinXSquared {
         fn info(&self) -> &NlpInfo {
             &self.info
         }
@@ -40,5 +40,5 @@ fn nlp_definition() {
         }
     }
 
-    dump_unconstrained_nlp(&nlp);
+    dump_nlp(&nlp);
 }

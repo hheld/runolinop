@@ -50,17 +50,31 @@ impl fmt::Display for VariableBounds {
     }
 }
 
-pub trait UnconstrainedNlp {
+pub trait NLP {
     fn info(&self) -> &NlpInfo;
     fn bounds(&self) -> Vec<VariableBounds>;
 
     fn objective(&self, xs: &[f64]) -> f64;
     fn grad_objective(&self, xs: &[f64]) -> Vec<f64>;
 
+    fn equality_constraints(&self, _xs: &[f64]) -> Vec<f64> {
+        vec![]
+    }
+    fn grad_equality_constraints(&self, _xs: &[f64]) -> Vec<Vec<f64>> {
+        vec![]
+    }
+
+    fn inequality_constraints(&self, _xs: &[f64]) -> Vec<f64> {
+        vec![]
+    }
+    fn grad_inequality_constraints(&self, _xs: &[f64]) -> Vec<Vec<f64>> {
+        vec![]
+    }
+
     fn initial_guess(&self) -> Vec<f64>;
 }
 
-pub fn dump_unconstrained_nlp(nlp: &dyn UnconstrainedNlp) {
+pub fn dump_nlp(nlp: &dyn NLP) {
     println!("NLP information: {}", nlp.info());
 
     for (v, b) in nlp.bounds().iter().enumerate() {
@@ -68,17 +82,9 @@ pub fn dump_unconstrained_nlp(nlp: &dyn UnconstrainedNlp) {
     }
 }
 
-pub trait ConstrainedNlp: UnconstrainedNlp {
-    fn equality_constraints(xs: &[f64]) -> Vec<f64>;
-    fn grad_equality_constraints(xs: &[f64]) -> Vec<Vec<f64>>;
-
-    fn inequality_constraints(xs: &[f64]) -> Vec<f64>;
-    fn grad_inequality_constraints(xs: &[f64]) -> Vec<Vec<f64>>;
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::nlp::{dump_unconstrained_nlp, ObjectiveSense};
+    use crate::nlp::{dump_nlp, ObjectiveSense};
 
     use super::*;
 
@@ -97,7 +103,7 @@ mod tests {
             },
         };
 
-        impl UnconstrainedNlp for MinXSquared {
+        impl NLP for MinXSquared {
             fn info(&self) -> &NlpInfo {
                 &self.info
             }
@@ -122,6 +128,6 @@ mod tests {
             }
         }
 
-        dump_unconstrained_nlp(&nlp);
+        dump_nlp(&nlp);
     }
 }
