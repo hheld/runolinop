@@ -1,7 +1,12 @@
+use std::fmt;
+
+use barrier_bounds_handler::BarrierBoundsHandler;
+
 use crate::optimizer::Optimizer;
 use crate::step_size_control::StepSizeControl;
-use crate::{ObjectiveSense, NLP};
-use std::fmt;
+use crate::NLP;
+
+mod barrier_bounds_handler;
 
 #[allow(dead_code)]
 struct Solver<'a, N, S, O>
@@ -13,6 +18,7 @@ where
     nlp: &'a N,
     step_size_control: &'a S,
     optimizer: &'a O,
+    bounds_handler: BarrierBoundsHandler<'a>,
 }
 
 impl<N, S, O> Solver<'_, N, S, O>
@@ -22,64 +28,25 @@ where
     O: Optimizer<N>,
 {
     #[allow(dead_code)]
-    fn solve(&self) -> Solution {
+    fn solve(&mut self) -> Solution {
         let mut context = self.optimizer.initialize(&self.nlp);
-        let mut barrier_parameter = 1.0E-6;
-        let barrier_decrease_factor = 0.5;
-        let bounds = self.nlp.bounds();
 
         while !self.optimizer.done(&context) {
             context.objective_previous = context.objective_current;
             context.x_previous = context.x_current.clone();
             context.iteration += 1;
-            context.objective_grad = self
-                .nlp
-                .grad_objective(&context.x_current)
-                .iter()
-                .zip(bounds.iter())
-                .zip(context.x_current.iter())
-                .map(|((grad_obj, bounds), x)| {
-                    let mut grad_barrier_term = 0.0;
 
-                    if bounds.lb > f64::NEG_INFINITY {
-                        grad_barrier_term += barrier_parameter * (1.0 / (x - bounds.lb));
-                    }
-
-                    if bounds.ub < f64::INFINITY {
-                        grad_barrier_term -= barrier_parameter * (1.0 / (bounds.ub - x));
-                    }
-
-                    grad_obj
-                        + grad_barrier_term
-                            * match self.nlp.info().sense {
-                                ObjectiveSense::Min => -1.0,
-                                ObjectiveSense::Max => 1.0,
-                            }
-                })
-                .collect();
+            context.objective_grad = self.bounds_handler.adapted_objective_gradient(
+                &context.x_current,
+                &self.nlp.grad_objective(&context.x_current),
+            );
 
             let d = self.optimizer.iterate(self.nlp, &mut context);
 
             context.objective_current = self.step_size_control.do_step(
                 |xs| {
-                    self.nlp.objective(xs)
-                        + xs.iter().zip(bounds.iter()).fold(0.0, |sum, (x, bounds)| {
-                            let mut barrier_term = 0.0;
-
-                            if bounds.lb > f64::NEG_INFINITY {
-                                barrier_term += barrier_parameter * (x - bounds.lb).ln();
-                            }
-
-                            if bounds.ub < f64::INFINITY {
-                                barrier_term -= barrier_parameter * (bounds.ub - x).ln();
-                            }
-
-                            sum + barrier_term
-                                * match self.nlp.info().sense {
-                                    ObjectiveSense::Min => -1.0,
-                                    ObjectiveSense::Max => 1.0,
-                                }
-                        })
+                    self.bounds_handler
+                        .adapted_objective_value(&xs, self.nlp.objective(xs))
                 },
                 &mut context.x_current,
                 &context.objective_grad,
@@ -87,7 +54,7 @@ where
                 &self.nlp.info().sense,
             );
 
-            barrier_parameter *= barrier_decrease_factor;
+            self.bounds_handler.end_of_iteration();
         }
 
         Solution {
@@ -115,10 +82,11 @@ impl fmt::Display for Solution {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::optimizer::SteepestDescent;
     use crate::step_size_control::ArmijoGoldsteinRule;
     use crate::{NlpInfo, ObjectiveSense, VariableBounds};
+
+    use super::*;
 
     #[test]
     fn min_unconstrained_steepest_descent() {
@@ -161,10 +129,16 @@ mod tests {
 
         let optimizer = SteepestDescent {};
 
-        let solver = Solver {
+        let mut solver = Solver {
             nlp: &nlp,
             step_size_control: &step_rule,
             optimizer: &optimizer,
+            bounds_handler: BarrierBoundsHandler {
+                bounds: &nlp.bounds(),
+                sense: &nlp.info().sense,
+                barrier_parameter: 1.0E-6,
+                barrier_decrease_factor: 0.5,
+            },
         };
 
         let solution = solver.solve();
@@ -214,10 +188,16 @@ mod tests {
 
         let optimizer = SteepestDescent {};
 
-        let solver = Solver {
+        let mut solver = Solver {
             nlp: &nlp,
             step_size_control: &step_rule,
             optimizer: &optimizer,
+            bounds_handler: BarrierBoundsHandler {
+                bounds: &nlp.bounds(),
+                sense: &nlp.info().sense,
+                barrier_parameter: 1.0E-6,
+                barrier_decrease_factor: 0.5,
+            },
         };
 
         let solution = solver.solve();
