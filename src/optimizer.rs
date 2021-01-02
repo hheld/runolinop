@@ -8,6 +8,7 @@ pub struct OptContext {
     pub objective_current: f64,
     pub objective_previous: f64,
     pub objective_grad: Vec<f64>,
+    pub direction_scale_factor: f64,
 }
 
 pub type StepDirection = Vec<f64>;
@@ -34,6 +35,7 @@ impl<Nlp: NLP> Optimizer<Nlp> for SteepestDescent {
                 ObjectiveSense::Max => f64::NEG_INFINITY,
             },
             objective_grad: vec![f64::INFINITY; nlp_info.num_variables as usize],
+            direction_scale_factor: 1.0,
         }
     }
 
@@ -67,6 +69,7 @@ mod tests {
             objective_current: obj,
             objective_previous: 0.0,
             objective_grad: vec![4.4, 5.5, 6.6],
+            direction_scale_factor: 1.0,
         };
 
         assert_eq!(oc.x_current, [1.0, 2.0, 3.0]);

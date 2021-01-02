@@ -43,7 +43,7 @@ where
 
             let d = self.optimizer.iterate(self.nlp, &mut context);
 
-            context.objective_current = self.step_size_control.do_step(
+            let step_info = self.step_size_control.do_step(
                 |xs| {
                     self.bounds_handler
                         .adapted_objective_value(&xs, self.nlp.objective(xs))
@@ -53,6 +53,9 @@ where
                 &d,
                 &self.nlp.info().sense,
             );
+
+            context.objective_current = step_info.obj_value;
+            context.direction_scale_factor = step_info.direction_scale_factor;
 
             self.bounds_handler.end_of_iteration();
         }

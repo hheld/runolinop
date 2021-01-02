@@ -9,7 +9,12 @@ pub trait StepSizeControl {
         grad_f: &[f64],
         direction: &[f64],
         sense: &ObjectiveSense,
-    ) -> f64;
+    ) -> StepInfo;
+}
+
+pub struct StepInfo {
+    pub obj_value: f64,
+    pub direction_scale_factor: f64,
 }
 
 pub struct ArmijoGoldsteinRule {
@@ -37,7 +42,7 @@ impl StepSizeControl for ArmijoGoldsteinRule {
         grad_f: &[f64],
         direction: &[f64],
         sense: &ObjectiveSense,
-    ) -> f64 {
+    ) -> StepInfo {
         let m = inner_product(grad_f, direction).unwrap();
         let t = -self.c * m;
 
@@ -66,6 +71,9 @@ impl StepSizeControl for ArmijoGoldsteinRule {
             *x_i = *x_step_i;
         }
 
-        f_x
+        StepInfo {
+            obj_value: f_x,
+            direction_scale_factor: alpha_j,
+        }
     }
 }
