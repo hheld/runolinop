@@ -39,7 +39,6 @@ impl<Nlp: NLP> Optimizer<Nlp> for SteepestDescent {
 
     fn iterate(&self, nlp: &Nlp, context: &mut OptContext) -> StepDirection {
         let nlp_info = nlp.info();
-
         match nlp_info.sense {
             ObjectiveSense::Min => vec_utils::scaled(&context.objective_grad, -1.0),
             ObjectiveSense::Max => context.objective_grad.clone(),

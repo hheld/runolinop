@@ -1,10 +1,10 @@
 use crate::optimizer::Optimizer;
 use crate::step_size_control::StepSizeControl;
-use crate::NLP;
+use crate::{ObjectiveSense, NLP};
 use std::fmt;
 
 #[allow(dead_code)]
-struct UnconstrainedSolver<'a, N, S, O>
+struct Solver<'a, N, S, O>
 where
     N: NLP,
     S: StepSizeControl,
@@ -15,7 +15,7 @@ where
     optimizer: &'a O,
 }
 
-impl<N, S, O> UnconstrainedSolver<'_, N, S, O>
+impl<N, S, O> Solver<'_, N, S, O>
 where
     N: NLP,
     S: StepSizeControl,
@@ -49,7 +49,12 @@ where
                         grad_barrier_term -= barrier_parameter * (1.0 / (bounds.ub - x));
                     }
 
-                    grad_obj - grad_barrier_term
+                    grad_obj
+                        + grad_barrier_term
+                            * match self.nlp.info().sense {
+                                ObjectiveSense::Min => -1.0,
+                                ObjectiveSense::Max => 1.0,
+                            }
                 })
                 .collect();
 
@@ -69,7 +74,11 @@ where
                                 barrier_term -= barrier_parameter * (bounds.ub - x).ln();
                             }
 
-                            sum - barrier_term
+                            sum + barrier_term
+                                * match self.nlp.info().sense {
+                                    ObjectiveSense::Min => -1.0,
+                                    ObjectiveSense::Max => 1.0,
+                                }
                         })
                 },
                 &mut context.x_current,
@@ -152,7 +161,7 @@ mod tests {
 
         let optimizer = SteepestDescent {};
 
-        let solver = UnconstrainedSolver {
+        let solver = Solver {
             nlp: &nlp,
             step_size_control: &step_rule,
             optimizer: &optimizer,
@@ -205,7 +214,7 @@ mod tests {
 
         let optimizer = SteepestDescent {};
 
-        let solver = UnconstrainedSolver {
+        let solver = Solver {
             nlp: &nlp,
             step_size_control: &step_rule,
             optimizer: &optimizer,
