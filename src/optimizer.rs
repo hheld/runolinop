@@ -1,4 +1,5 @@
 use crate::{vec_utils, ObjectiveSense, NLP};
+use nalgebra::{DMatrix, DVector};
 
 #[allow(dead_code)]
 pub struct OptContext {
@@ -14,15 +15,15 @@ pub struct OptContext {
 pub type StepDirection = Vec<f64>;
 
 pub trait Optimizer<Nlp: NLP> {
-    fn initialize(&self, nlp: &Nlp) -> OptContext;
-    fn iterate(&self, nlp: &Nlp, context: &mut OptContext) -> StepDirection;
+    fn initialize(&mut self, nlp: &Nlp) -> OptContext;
+    fn iterate(&mut self, nlp: &Nlp, context: &mut OptContext) -> StepDirection;
     fn done(&self, context: &OptContext) -> bool;
 }
 
 pub struct SteepestDescent {}
 
 impl<Nlp: NLP> Optimizer<Nlp> for SteepestDescent {
-    fn initialize(&self, nlp: &Nlp) -> OptContext {
+    fn initialize(&mut self, nlp: &Nlp) -> OptContext {
         let nlp_info = nlp.info();
 
         OptContext {
@@ -39,12 +40,99 @@ impl<Nlp: NLP> Optimizer<Nlp> for SteepestDescent {
         }
     }
 
-    fn iterate(&self, nlp: &Nlp, context: &mut OptContext) -> StepDirection {
+    fn iterate(&mut self, nlp: &Nlp, context: &mut OptContext) -> StepDirection {
         let nlp_info = nlp.info();
         match nlp_info.sense {
             ObjectiveSense::Min => vec_utils::scaled(&context.objective_grad, -1.0),
             ObjectiveSense::Max => context.objective_grad.clone(),
         }
+    }
+
+    fn done(&self, context: &OptContext) -> bool {
+        (context.objective_current - context.objective_previous).abs() < 1.0E-9
+    }
+}
+
+#[allow(non_snake_case)]
+pub struct Bfgs {
+    g_k: DVector<f64>,
+    d_k: DVector<f64>,
+    H: DMatrix<f64>,
+    n: u32,
+    sense_factor: f64,
+}
+
+impl Bfgs {
+    #[allow(non_snake_case, dead_code)]
+    pub fn new(nlp: &impl NLP) -> Self {
+        let initial_point = nlp.initial_guess();
+        let n = nlp.info().num_variables;
+        let H = DMatrix::<f64>::identity(n as usize, n as usize);
+        let g_k = DVector::<f64>::from_vec(nlp.grad_objective(&initial_point));
+        let sense_factor = match nlp.info().sense {
+            ObjectiveSense::Min => -1.0,
+            ObjectiveSense::Max => 1.0,
+        };
+
+        let d_k = sense_factor * &H * &g_k;
+
+        Bfgs {
+            g_k,
+            d_k,
+            H,
+            n,
+            sense_factor,
+        }
+    }
+}
+
+impl<Nlp: NLP> Optimizer<Nlp> for Bfgs {
+    fn initialize(&mut self, nlp: &Nlp) -> OptContext {
+        let nlp_info = nlp.info();
+
+        OptContext {
+            iteration: 0,
+            x_current: nlp.initial_guess(),
+            x_previous: nlp.initial_guess(),
+            objective_current: 0.0,
+            objective_previous: match nlp_info.sense {
+                ObjectiveSense::Min => f64::INFINITY,
+                ObjectiveSense::Max => f64::NEG_INFINITY,
+            },
+            objective_grad: vec![f64::INFINITY; nlp_info.num_variables as usize],
+            direction_scale_factor: 1.0,
+        }
+    }
+
+    #[allow(non_snake_case)]
+    fn iterate(&mut self, _nlp: &Nlp, context: &mut OptContext) -> StepDirection {
+        if context.iteration == 1 {
+            return self.d_k.as_slice().to_vec();
+        }
+
+        let g_k_next = DVector::<f64>::from_vec(context.objective_grad.to_vec());
+        let q_k = &g_k_next - &self.g_k;
+        let p_k = context.direction_scale_factor * &self.d_k;
+
+        self.g_k = g_k_next;
+
+        let mut H_q_k = DVector::<f64>::zeros(self.n as usize);
+        H_q_k.sygemv(-self.sense_factor, &self.H, &q_k, 0.);
+
+        let p_k_q_k = p_k.dot(&q_k);
+
+        self.H.syger(
+            1. / p_k_q_k + q_k.dot(&H_q_k) / p_k_q_k.powi(2),
+            &p_k,
+            &p_k,
+            1.,
+        );
+        self.H.ger(-1. / p_k_q_k, &p_k, &H_q_k, 1.);
+        self.H.ger(-1. / p_k_q_k, &H_q_k, &p_k, 1.);
+
+        self.d_k.sygemv(self.sense_factor, &self.H, &self.g_k, 0.);
+
+        self.d_k.as_slice().to_vec()
     }
 
     fn done(&self, context: &OptContext) -> bool {

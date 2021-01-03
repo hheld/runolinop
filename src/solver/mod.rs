@@ -17,7 +17,7 @@ where
 {
     nlp: &'a N,
     step_size_control: &'a S,
-    optimizer: &'a O,
+    optimizer: &'a mut O,
     bounds_handler: BarrierBoundsHandler<'a>,
 }
 
@@ -85,7 +85,7 @@ impl fmt::Display for Solution {
 
 #[cfg(test)]
 mod tests {
-    use crate::optimizer::SteepestDescent;
+    use crate::optimizer::{Bfgs, SteepestDescent};
     use crate::step_size_control::ArmijoGoldsteinRule;
     use crate::{NlpInfo, ObjectiveSense, VariableBounds};
 
@@ -130,12 +130,12 @@ mod tests {
             }
         }
 
-        let optimizer = SteepestDescent {};
+        let mut optimizer = SteepestDescent {};
 
         let mut solver = Solver {
             nlp: &nlp,
             step_size_control: &step_rule,
-            optimizer: &optimizer,
+            optimizer: &mut optimizer,
             bounds_handler: BarrierBoundsHandler {
                 bounds: &nlp.bounds(),
                 sense: &nlp.info().sense,
@@ -189,12 +189,130 @@ mod tests {
             }
         }
 
-        let optimizer = SteepestDescent {};
+        let mut optimizer = SteepestDescent {};
 
         let mut solver = Solver {
             nlp: &nlp,
             step_size_control: &step_rule,
-            optimizer: &optimizer,
+            optimizer: &mut optimizer,
+            bounds_handler: BarrierBoundsHandler {
+                bounds: &nlp.bounds(),
+                sense: &nlp.info().sense,
+                barrier_parameter: 1.0E-6,
+                barrier_decrease_factor: 0.5,
+            },
+        };
+
+        let solution = solver.solve();
+
+        println!("solution: {}", solution);
+        assert!((solution.best_solution[0] - nlp.bounds()[0].ub).abs() < 1.0E-8);
+    }
+
+    #[test]
+    fn min_unconstrained_bfgs() {
+        let step_rule = ArmijoGoldsteinRule::new(1., 0.95, 0.01);
+
+        struct MinXSquared {
+            info: NlpInfo,
+        };
+
+        let nlp = MinXSquared {
+            info: NlpInfo {
+                num_variables: 1,
+                num_inequality_constraints: 0,
+                num_equality_constraints: 0,
+                sense: ObjectiveSense::Min,
+            },
+        };
+
+        impl NLP for MinXSquared {
+            fn info(&self) -> &NlpInfo {
+                &self.info
+            }
+
+            fn bounds(&self) -> Vec<VariableBounds> {
+                vec![VariableBounds { lb: 1.1, ub: 3.213 }]
+            }
+
+            fn objective(&self, xs: &[f64]) -> f64 {
+                xs[0].powi(2)
+            }
+
+            fn grad_objective(&self, xs: &[f64]) -> Vec<f64> {
+                vec![2.0 * xs[0]]
+            }
+
+            fn initial_guess(&self) -> Vec<f64> {
+                vec![2.0]
+            }
+        }
+
+        let mut optimizer = Bfgs::new(&nlp);
+
+        let mut solver = Solver {
+            nlp: &nlp,
+            step_size_control: &step_rule,
+            optimizer: &mut optimizer,
+            bounds_handler: BarrierBoundsHandler {
+                bounds: &nlp.bounds(),
+                sense: &nlp.info().sense,
+                barrier_parameter: 1.0E-6,
+                barrier_decrease_factor: 0.5,
+            },
+        };
+
+        let solution = solver.solve();
+
+        println!("solution: {}", solution);
+        assert!((solution.best_solution[0] - nlp.bounds()[0].lb).abs() < 1.0E-8);
+    }
+
+    #[test]
+    fn max_unconstrained_bfgs() {
+        let step_rule = ArmijoGoldsteinRule::new(1., 0.95, 0.01);
+
+        struct MinXSquared {
+            info: NlpInfo,
+        };
+
+        let nlp = MinXSquared {
+            info: NlpInfo {
+                num_variables: 1,
+                num_inequality_constraints: 0,
+                num_equality_constraints: 0,
+                sense: ObjectiveSense::Max,
+            },
+        };
+
+        impl NLP for MinXSquared {
+            fn info(&self) -> &NlpInfo {
+                &self.info
+            }
+
+            fn bounds(&self) -> Vec<VariableBounds> {
+                vec![VariableBounds { lb: 1.1, ub: 3.213 }]
+            }
+
+            fn objective(&self, xs: &[f64]) -> f64 {
+                xs[0].powi(2)
+            }
+
+            fn grad_objective(&self, xs: &[f64]) -> Vec<f64> {
+                vec![2.0 * xs[0]]
+            }
+
+            fn initial_guess(&self) -> Vec<f64> {
+                vec![2.0]
+            }
+        }
+
+        let mut optimizer = Bfgs::new(&nlp);
+
+        let mut solver = Solver {
+            nlp: &nlp,
+            step_size_control: &step_rule,
+            optimizer: &mut optimizer,
             bounds_handler: BarrierBoundsHandler {
                 bounds: &nlp.bounds(),
                 sense: &nlp.info().sense,
