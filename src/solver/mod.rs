@@ -3,29 +3,33 @@ use std::fmt;
 use barrier_bounds_handler::BarrierBoundsHandler;
 
 use crate::optimizer::Optimizer;
+use crate::output::SolverLogger;
 use crate::step_size_control::StepSizeControl;
 use crate::NLP;
 
 mod barrier_bounds_handler;
 
 #[allow(dead_code)]
-struct Solver<'a, N, S, O>
+struct Solver<'a, N, S, O, L>
 where
     N: NLP,
     S: StepSizeControl,
     O: Optimizer<N>,
+    L: SolverLogger,
 {
     nlp: &'a N,
     step_size_control: &'a S,
     optimizer: &'a mut O,
     bounds_handler: BarrierBoundsHandler<'a>,
+    logger: Vec<L>,
 }
 
-impl<N, S, O> Solver<'_, N, S, O>
+impl<N, S, O, L> Solver<'_, N, S, O, L>
 where
     N: NLP,
     S: StepSizeControl,
     O: Optimizer<N>,
+    L: SolverLogger,
 {
     #[allow(dead_code)]
     fn solve(&mut self) -> Solution {
@@ -58,6 +62,14 @@ where
             context.direction_scale_factor = step_info.direction_scale_factor;
 
             self.bounds_handler.end_of_iteration();
+
+            for logger in self.logger.iter_mut() {
+                logger.log(&context, false);
+            }
+        }
+
+        for logger in self.logger.iter_mut() {
+            logger.log(&context, true);
         }
 
         Solution {
@@ -90,6 +102,7 @@ mod tests {
     use crate::{NlpInfo, ObjectiveSense, VariableBounds};
 
     use super::*;
+    use crate::output::StdoutLogger;
 
     #[test]
     fn min_unconstrained_steepest_descent() {
@@ -142,6 +155,7 @@ mod tests {
                 barrier_parameter: 1.0E-6,
                 barrier_decrease_factor: 0.5,
             },
+            logger: vec![StdoutLogger::new(1)],
         };
 
         let solution = solver.solve();
@@ -201,6 +215,7 @@ mod tests {
                 barrier_parameter: 1.0E-6,
                 barrier_decrease_factor: 0.5,
             },
+            logger: vec![StdoutLogger::new(1)],
         };
 
         let solution = solver.solve();
@@ -260,6 +275,7 @@ mod tests {
                 barrier_parameter: 1.0E-6,
                 barrier_decrease_factor: 0.5,
             },
+            logger: vec![StdoutLogger::new(1)],
         };
 
         let solution = solver.solve();
@@ -319,6 +335,7 @@ mod tests {
                 barrier_parameter: 1.0E-6,
                 barrier_decrease_factor: 0.5,
             },
+            logger: vec![StdoutLogger::new(10)],
         };
 
         let solution = solver.solve();
