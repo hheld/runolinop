@@ -136,7 +136,7 @@ impl<Nlp: NLP> Optimizer<Nlp> for Bfgs {
     }
 
     fn done(&self, context: &OptContext) -> bool {
-        (context.objective_current - context.objective_previous).abs() < 1.0E-9
+        (context.objective_current - context.objective_previous).abs() < 1.0E-12
     }
 }
 

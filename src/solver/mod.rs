@@ -1,6 +1,6 @@
 use std::fmt;
 
-use barrier_bounds_handler::BarrierBoundsHandler;
+pub use barrier_bounds_handler::BarrierBoundsHandler;
 
 use crate::optimizer::Optimizer;
 use crate::output::SolverLogger;
@@ -10,18 +10,18 @@ use crate::NLP;
 mod barrier_bounds_handler;
 
 #[allow(dead_code)]
-struct Solver<'a, N, S, O, L>
+pub struct Solver<'a, N, S, O, L>
 where
     N: NLP,
     S: StepSizeControl,
     O: Optimizer<N>,
     L: SolverLogger,
 {
-    nlp: &'a N,
-    step_size_control: &'a S,
-    optimizer: &'a mut O,
-    bounds_handler: BarrierBoundsHandler<'a>,
-    logger: Vec<L>,
+    pub nlp: &'a N,
+    pub step_size_control: &'a S,
+    pub optimizer: &'a mut O,
+    pub bounds_handler: BarrierBoundsHandler<'a>,
+    pub logger: Vec<L>,
 }
 
 impl<N, S, O, L> Solver<'_, N, S, O, L>
@@ -32,7 +32,7 @@ where
     L: SolverLogger,
 {
     #[allow(dead_code)]
-    fn solve(&mut self) -> Solution {
+    pub fn solve(&mut self) -> Solution {
         let mut context = self.optimizer.initialize(&self.nlp);
 
         while !self.optimizer.done(&context) {
@@ -81,10 +81,10 @@ where
 }
 
 #[allow(dead_code)]
-struct Solution {
-    best_objective_value: f64,
-    best_solution: Vec<f64>,
-    num_iterations: u32,
+pub struct Solution {
+    pub best_objective_value: f64,
+    pub best_solution: Vec<f64>,
+    pub num_iterations: u32,
 }
 
 impl fmt::Display for Solution {

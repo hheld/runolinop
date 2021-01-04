@@ -39,6 +39,7 @@ impl fmt::Display for NlpInfo {
     }
 }
 
+#[derive(Clone)]
 pub struct VariableBounds {
     pub lb: f64,
     pub ub: f64,

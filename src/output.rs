@@ -1,6 +1,7 @@
 use crate::optimizer::OptContext;
 use crate::output::Frequency::EveryNthIteration;
 
+#[allow(dead_code)]
 pub enum Frequency {
     EveryNthIteration(u32),
 }
@@ -15,6 +16,7 @@ pub struct StdoutLogger {
 }
 
 impl StdoutLogger {
+    #[allow(dead_code)]
     pub fn new(n: u32) -> Self {
         StdoutLogger {
             frequency: EveryNthIteration(n),
