@@ -56,7 +56,7 @@ impl BarrierBoundsHandler<'_> {
             .collect()
     }
 
-    pub fn end_of_iteration(&mut self) {
+    pub fn update_barrier_parameter(&mut self) {
         self.barrier_parameter *= self.barrier_decrease_factor;
     }
 }

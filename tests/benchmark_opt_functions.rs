@@ -1,6 +1,6 @@
 use runolinop::{
-    ArmijoGoldsteinRule, BarrierBoundsHandler, Bfgs, NlpInfo, ObjectiveSense, Solver, StdoutLogger,
-    VariableBounds, NLP,
+    ArmijoGoldsteinRule, AugmentedLagrangianConstraintHandler, BarrierBoundsHandler, Bfgs, NlpInfo,
+    ObjectiveSense, Solver, StdoutLogger, VariableBounds, NLP,
 };
 
 fn rosenbrock(xs: &[f64], n: usize) -> f64 {
@@ -79,6 +79,12 @@ fn rosenbrock_bfgs_benchmark() {
             sense: &nlp.info().sense,
             barrier_parameter: 1.0E-6,
             barrier_decrease_factor: 0.5,
+        },
+        constraints_handler: AugmentedLagrangianConstraintHandler {
+            mu: &mut vec![0.0; nlp.info().num_variables as usize],
+            lambda: &mut vec![0.0; nlp.info.num_variables as usize],
+            c: 1.0,
+            sense: &ObjectiveSense::Min,
         },
         logger: vec![StdoutLogger::new(100)],
     };

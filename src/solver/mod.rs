@@ -1,5 +1,6 @@
 use std::fmt;
 
+pub use augmented_lagrangian_constraint_handler::AugmentedLagrangianConstraintHandler;
 pub use barrier_bounds_handler::BarrierBoundsHandler;
 
 use crate::optimizer::Optimizer;
@@ -7,6 +8,7 @@ use crate::output::SolverLogger;
 use crate::step_size_control::StepSizeControl;
 use crate::NLP;
 
+mod augmented_lagrangian_constraint_handler;
 mod barrier_bounds_handler;
 
 #[allow(dead_code)]
@@ -21,6 +23,7 @@ where
     pub step_size_control: &'a S,
     pub optimizer: &'a mut O,
     pub bounds_handler: BarrierBoundsHandler<'a>,
+    pub constraints_handler: AugmentedLagrangianConstraintHandler<'a>,
     pub logger: Vec<L>,
 }
 
@@ -40,17 +43,41 @@ where
             context.x_previous = context.x_current.clone();
             context.iteration += 1;
 
-            context.objective_grad = self.bounds_handler.adapted_objective_gradient(
+            let g = self.nlp.inequality_constraints(&context.x_current);
+            let h = self.nlp.equality_constraints(&context.x_current);
+            let grad_f = self.bounds_handler.adapted_objective_gradient(
                 &context.x_current,
                 &self.nlp.grad_objective(&context.x_current),
+            );
+
+            context.objective_grad = self.constraints_handler.adapted_objective_grad(
+                &grad_f,
+                &g,
+                &self
+                    .nlp
+                    .grad_inequality_constraints(&context.x_current)
+                    .iter()
+                    .map(|x| &x[..])
+                    .collect::<Vec<_>>(),
+                &h,
+                &self
+                    .nlp
+                    .grad_equality_constraints(&context.x_current)
+                    .iter()
+                    .map(|x| &x[..])
+                    .collect::<Vec<_>>(),
             );
 
             let d = self.optimizer.iterate(self.nlp, &mut context);
 
             let step_info = self.step_size_control.do_step(
                 |xs| {
-                    self.bounds_handler
-                        .adapted_objective_value(&xs, self.nlp.objective(xs))
+                    self.constraints_handler.adapted_objective_value(
+                        self.bounds_handler
+                            .adapted_objective_value(&xs, self.nlp.objective(xs)),
+                        &self.nlp.inequality_constraints(&xs),
+                        &self.nlp.equality_constraints(&xs),
+                    )
                 },
                 &mut context.x_current,
                 &context.objective_grad,
@@ -61,7 +88,11 @@ where
             context.objective_current = step_info.obj_value;
             context.direction_scale_factor = step_info.direction_scale_factor;
 
-            self.bounds_handler.end_of_iteration();
+            self.bounds_handler.update_barrier_parameter();
+
+            let g = self.nlp.inequality_constraints(&context.x_current);
+            let h = self.nlp.equality_constraints(&context.x_current);
+            self.constraints_handler.update_multipliers(&g, &h);
 
             for logger in self.logger.iter_mut() {
                 logger.log(&context, false);
@@ -155,6 +186,12 @@ mod tests {
                 barrier_parameter: 1.0E-6,
                 barrier_decrease_factor: 0.5,
             },
+            constraints_handler: AugmentedLagrangianConstraintHandler {
+                mu: &mut vec![0.0; nlp.info().num_variables as usize],
+                lambda: &mut vec![0.0; nlp.info.num_variables as usize],
+                c: 1.0,
+                sense: &ObjectiveSense::Min,
+            },
             logger: vec![StdoutLogger::new(1)],
         };
 
@@ -214,6 +251,12 @@ mod tests {
                 sense: &nlp.info().sense,
                 barrier_parameter: 1.0E-6,
                 barrier_decrease_factor: 0.5,
+            },
+            constraints_handler: AugmentedLagrangianConstraintHandler {
+                mu: &mut vec![0.0; nlp.info().num_variables as usize],
+                lambda: &mut vec![0.0; nlp.info.num_variables as usize],
+                c: 1.0,
+                sense: &ObjectiveSense::Min,
             },
             logger: vec![StdoutLogger::new(1)],
         };
@@ -275,6 +318,12 @@ mod tests {
                 barrier_parameter: 1.0E-6,
                 barrier_decrease_factor: 0.5,
             },
+            constraints_handler: AugmentedLagrangianConstraintHandler {
+                mu: &mut vec![0.0; nlp.info().num_variables as usize],
+                lambda: &mut vec![0.0; nlp.info.num_variables as usize],
+                c: 1.0,
+                sense: &ObjectiveSense::Min,
+            },
             logger: vec![StdoutLogger::new(1)],
         };
 
@@ -334,6 +383,12 @@ mod tests {
                 sense: &nlp.info().sense,
                 barrier_parameter: 1.0E-6,
                 barrier_decrease_factor: 0.5,
+            },
+            constraints_handler: AugmentedLagrangianConstraintHandler {
+                mu: &mut vec![0.0; nlp.info().num_variables as usize],
+                lambda: &mut vec![0.0; nlp.info.num_variables as usize],
+                c: 1.0,
+                sense: &ObjectiveSense::Min,
             },
             logger: vec![StdoutLogger::new(10)],
         };
