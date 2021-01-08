@@ -17,13 +17,17 @@ impl AugmentedLagrangianConstraintHandler<'_> {
 
     #[allow(dead_code)]
     pub fn adapted_objective_value(&self, f: f64, g: &[f64], h: &[f64]) -> f64 {
-        f + match inner_product(&self.lambda, h) {
-            None => 0.0,
-            Some(prod) => prod,
-        } + 0.5 * self.c * norm2_sqr(&h)
-            + self.mu.iter().zip(g.iter()).fold(0.0, |sum, (mu, g)| {
-                sum + self.inequality_penalization(*g, *mu)
-            })
+        let mut obj = f;
+
+        if h.len() > 0 {
+            obj += inner_product(self.lambda, h).unwrap() + 0.5 * self.c * norm2_sqr(h);
+        }
+
+        obj += self.mu.iter().zip(g.iter()).fold(0.0, |sum, (mu, g)| {
+            sum + self.inequality_penalization(*g, *mu)
+        });
+
+        obj
     }
 
     #[allow(dead_code)]
@@ -35,35 +39,43 @@ impl AugmentedLagrangianConstraintHandler<'_> {
         h: &[f64],
         grad_h: &[&[f64]],
     ) -> Vec<f64> {
+        let grad_ineq = {
+            let mut grad_ineq = vec![0.0; grad_f.len()];
+
+            if grad_g.len() > 0 {
+                for (j, grad_g_j) in grad_g.iter().enumerate() {
+                    let factor = 0.0_f64.max(self.mu[j] + self.c * g[j]);
+
+                    for (i, grad_ineq_i) in grad_ineq.iter_mut().enumerate() {
+                        *grad_ineq_i += factor * grad_g_j[i];
+                    }
+                }
+            }
+
+            grad_ineq
+        };
+
+        let grad_eq = {
+            let mut grad_eq = vec![0.0; grad_f.len()];
+
+            if grad_h.len() > 0 {
+                for (j, grad_h_j) in grad_h.iter().enumerate() {
+                    let factor = self.lambda[j] + self.c * h[j];
+
+                    for (i, grad_eq_i) in grad_eq.iter_mut().enumerate() {
+                        *grad_eq_i += factor * grad_h_j[i];
+                    }
+                }
+            }
+
+            grad_eq
+        };
+
         grad_f
             .iter()
-            .zip(
-                grad_g
-                    .iter()
-                    .zip(self.mu.iter())
-                    .zip(g.iter())
-                    .map(|((grad_g_j, mu_j), g_j)| {
-                        grad_g_j.iter().fold(0.0, |sum, g_g_i| {
-                            sum + 0.0_f64.max(*mu_j + self.c * g_j) * g_g_i
-                        })
-                    }),
-            )
-            .zip(
-                grad_h
-                    .iter()
-                    .zip(self.lambda.iter())
-                    .map(|(grad_h_j, lambda_j)| {
-                        grad_h_j
-                            .iter()
-                            .fold(0.0, |sum, g_h_j| sum + lambda_j * g_h_j)
-                    }),
-            )
-            .zip(
-                grad_h.iter().zip(h.iter()).map(|(grad_h_j, h_j)| {
-                    grad_h_j.iter().fold(0.0, |sum, g_h_j| sum + h_j * g_h_j)
-                }),
-            )
-            .map(|(((g_f, g_ineq), g_equ), g_aug)| g_f + g_ineq + g_equ + g_aug)
+            .zip(grad_ineq.iter())
+            .zip(grad_eq.iter())
+            .map(|((grad_f_i, grad_g_i), grad_h_i)| grad_f_i + grad_g_i + grad_h_i)
             .collect()
     }
 
