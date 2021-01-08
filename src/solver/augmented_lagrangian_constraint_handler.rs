@@ -82,13 +82,17 @@ impl AugmentedLagrangianConstraintHandler<'_> {
     #[allow(dead_code)]
     pub fn update_multipliers(&mut self, g: &[f64], h: &[f64]) {
         let c = self.c;
+        let sense_factor = match self.sense {
+            ObjectiveSense::Min => 1.0,
+            ObjectiveSense::Max => -1.0,
+        };
 
         for mu in self.mu.iter_mut() {
-            *mu += g.iter().fold(0.0, |sum, g_j| sum + (c * g_j).max(-*mu));
+            *mu += sense_factor * g.iter().fold(0.0, |sum, g_j| sum + (c * g_j).max(-*mu));
         }
 
         for (lambda, h_j) in self.lambda.iter_mut().zip(h) {
-            *lambda += c * h_j;
+            *lambda += sense_factor * c * h_j;
         }
     }
 }
