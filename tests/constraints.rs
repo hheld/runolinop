@@ -17,7 +17,90 @@ fn grad_f(xs: &[f64]) -> Vec<f64> {
 }
 
 #[test]
-fn constrained_min_problem() {
+fn inequality_constrained_min_problem() {
+    let step_rule = ArmijoGoldsteinRule::new(1., 0.5, 0.2);
+
+    struct Prob {
+        info: NlpInfo,
+    };
+
+    let nlp = Prob {
+        info: NlpInfo {
+            num_variables: 2,
+            num_inequality_constraints: 1,
+            num_equality_constraints: 0,
+            sense: ObjectiveSense::Min,
+        },
+    };
+
+    impl NLP for Prob {
+        fn info(&self) -> &NlpInfo {
+            &self.info
+        }
+
+        fn bounds(&self) -> Vec<VariableBounds> {
+            vec![
+                VariableBounds {
+                    lb: 0.0,
+                    ub: f64::INFINITY,
+                };
+                self.info.num_variables as usize
+            ]
+        }
+
+        fn objective(&self, xs: &[f64]) -> f64 {
+            f(xs)
+        }
+
+        fn grad_objective(&self, xs: &[f64]) -> Vec<f64> {
+            grad_f(xs)
+        }
+
+        fn inequality_constraints(&self, xs: &[f64]) -> Vec<f64> {
+            vec![-xs[0] - xs[1] + 0.5]
+        }
+
+        fn grad_inequality_constraints(&self, _xs: &[f64]) -> Vec<Vec<f64>> {
+            vec![vec![-1.0, -1.0]]
+        }
+
+        fn initial_guess(&self) -> Vec<f64> {
+            vec![1.0; self.info.num_variables as usize]
+        }
+    }
+
+    let mut optimizer = Bfgs::new(&nlp);
+    let mut solver = Solver {
+        nlp: &nlp,
+        step_size_control: &step_rule,
+        optimizer: &mut optimizer,
+        bounds_handler: BarrierBoundsHandler {
+            bounds: &nlp.bounds(),
+            sense: &nlp.info().sense,
+            barrier_parameter: 1.0E-6,
+            barrier_decrease_factor: 0.5,
+        },
+        constraints_handler: AugmentedLagrangianConstraintHandler {
+            mu: &mut vec![0.0; nlp.info().num_variables as usize],
+            lambda: &mut vec![0.0; nlp.info.num_variables as usize],
+            c: 1.0E9,
+            sense: &nlp.info.sense,
+        },
+        logger: vec![StdoutLogger::new(1)],
+    };
+
+    let solution = solver.solve();
+    println!("solution: {}", solution);
+
+    assert!(
+        nlp.inequality_constraints(&solution.best_solution)[0] <= 0.0,
+        "sum of variable values: {}",
+        solution.best_solution.iter().sum::<f64>()
+    );
+}
+
+#[test]
+fn equality_constrained_min_problem() {
     let step_rule = ArmijoGoldsteinRule::new(1., 0.5, 0.2);
 
     struct Prob {
@@ -28,7 +111,7 @@ fn constrained_min_problem() {
         info: NlpInfo {
             num_variables: 2,
             num_inequality_constraints: 0,
-            num_equality_constraints: 0,
+            num_equality_constraints: 1,
             sense: ObjectiveSense::Min,
         },
     };
@@ -56,6 +139,14 @@ fn constrained_min_problem() {
             grad_f(xs)
         }
 
+        fn equality_constraints(&self, xs: &[f64]) -> Vec<f64> {
+            vec![xs[0] + xs[1] - 0.5]
+        }
+
+        fn grad_equality_constraints(&self, _xs: &[f64]) -> Vec<Vec<f64>> {
+            vec![vec![1.0, 1.0]]
+        }
+
         fn initial_guess(&self) -> Vec<f64> {
             vec![1.0; self.info.num_variables as usize]
         }
@@ -73,10 +164,10 @@ fn constrained_min_problem() {
             barrier_decrease_factor: 0.5,
         },
         constraints_handler: AugmentedLagrangianConstraintHandler {
-            mu: &mut vec![0.0; nlp.info().num_variables as usize],
-            lambda: &mut vec![0.0; nlp.info.num_variables as usize],
-            c: 1.0,
-            sense: &ObjectiveSense::Min,
+            mu: &mut vec![0.0; nlp.info().num_inequality_constraints as usize],
+            lambda: &mut vec![0.0; nlp.info().num_equality_constraints as usize],
+            c: 1.0E9,
+            sense: &nlp.info.sense,
         },
         logger: vec![StdoutLogger::new(1)],
     };
@@ -84,12 +175,9 @@ fn constrained_min_problem() {
     let solution = solver.solve();
     println!("solution: {}", solution);
 
-    for i in 0..nlp.info.num_variables as usize {
-        assert!(
-            (solution.best_solution[i] - 0.0).abs() < 1.0E-6,
-            "failing component {}: {}",
-            i,
-            solution.best_solution[i]
-        );
-    }
+    assert!(
+        nlp.equality_constraints(&solution.best_solution)[0].abs() <= 1.0E-3,
+        "sum of variable values: {}",
+        solution.best_solution.iter().sum::<f64>()
+    );
 }

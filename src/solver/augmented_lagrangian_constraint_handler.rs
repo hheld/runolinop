@@ -42,13 +42,11 @@ impl AugmentedLagrangianConstraintHandler<'_> {
         let grad_ineq = {
             let mut grad_ineq = vec![0.0; grad_f.len()];
 
-            if grad_g.len() > 0 {
-                for (j, grad_g_j) in grad_g.iter().enumerate() {
-                    let factor = 0.0_f64.max(self.mu[j] + self.c * g[j]);
+            for (j, grad_g_j) in grad_g.iter().enumerate() {
+                let factor = 0.0_f64.max(self.mu[j] + self.c * g[j]);
 
-                    for (i, grad_ineq_i) in grad_ineq.iter_mut().enumerate() {
-                        *grad_ineq_i += factor * grad_g_j[i];
-                    }
+                for (i, grad_ineq_i) in grad_ineq.iter_mut().enumerate() {
+                    *grad_ineq_i += factor * grad_g_j[i];
                 }
             }
 
@@ -58,13 +56,11 @@ impl AugmentedLagrangianConstraintHandler<'_> {
         let grad_eq = {
             let mut grad_eq = vec![0.0; grad_f.len()];
 
-            if grad_h.len() > 0 {
-                for (j, grad_h_j) in grad_h.iter().enumerate() {
-                    let factor = self.lambda[j] + self.c * h[j];
+            for (j, grad_h_j) in grad_h.iter().enumerate() {
+                let factor = self.lambda[j] + self.c * h[j];
 
-                    for (i, grad_eq_i) in grad_eq.iter_mut().enumerate() {
-                        *grad_eq_i += factor * grad_h_j[i];
-                    }
+                for (i, grad_eq_i) in grad_eq.iter_mut().enumerate() {
+                    *grad_eq_i += factor * grad_h_j[i];
                 }
             }
 
