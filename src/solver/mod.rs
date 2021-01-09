@@ -6,6 +6,7 @@ pub use barrier_bounds_handler::BarrierBoundsHandler;
 use crate::optimizer::Optimizer;
 use crate::output::SolverLogger;
 use crate::step_size_control::StepSizeControl;
+use crate::vec_utils::norm2_sqr;
 use crate::NLP;
 
 mod augmented_lagrangian_constraint_handler;
@@ -69,6 +70,10 @@ where
             );
 
             let d = self.optimizer.iterate(self.nlp, &mut context);
+
+            if norm2_sqr(&d) < 1.0E-10 {
+                break;
+            }
 
             let step_info = self.step_size_control.do_step(
                 |xs| {
