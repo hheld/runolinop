@@ -264,6 +264,6 @@ mod tests {
         let solution = solver.solve();
 
         println!("solution: {}", solution);
-        assert!((solution.best_solution[0] - nlp.bounds()[0].lb).abs() < 1.0E-8);
+        assert!((solution.best_solution[0] - nlp.bounds()[0].lb).abs() < 1.0E-6);
     }
 }
