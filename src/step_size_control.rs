@@ -50,7 +50,7 @@ impl StepSizeControl for ArmijoGoldsteinRule {
         let mut alpha_j = self.alpha_0;
 
         while f_x_step.is_nan() {
-            alpha_j *= 0.5;
+            alpha_j *= self.tau;
             x_step = add(&x, &scaled(direction, alpha_j)).unwrap();
             f_x_step = f(&x_step);
         }
