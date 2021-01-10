@@ -1,25 +1,9 @@
 use core::fmt;
 
-#[allow(dead_code)]
-pub enum ObjectiveSense {
-    Min,
-    Max,
-}
-
-impl fmt::Display for ObjectiveSense {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            ObjectiveSense::Min => write!(f, "Min"),
-            ObjectiveSense::Max => write!(f, "Max"),
-        }
-    }
-}
-
 pub struct NlpInfo {
     pub num_variables: u32,
     pub num_inequality_constraints: u32,
     pub num_equality_constraints: u32,
-    pub sense: ObjectiveSense,
 }
 
 impl fmt::Display for NlpInfo {
@@ -34,8 +18,7 @@ impl fmt::Display for NlpInfo {
             f,
             "number of equality constraints: {}",
             self.num_equality_constraints
-        )?;
-        writeln!(f, "objective sense: {}", self.sense)
+        )
     }
 }
 
@@ -85,7 +68,7 @@ pub fn dump_nlp(nlp: &dyn NLP) {
 
 #[cfg(test)]
 mod tests {
-    use crate::nlp::{dump_nlp, ObjectiveSense};
+    use crate::nlp::dump_nlp;
 
     use super::*;
 
@@ -100,7 +83,6 @@ mod tests {
                 num_variables: 1,
                 num_inequality_constraints: 0,
                 num_equality_constraints: 0,
-                sense: ObjectiveSense::Min,
             },
         };
 

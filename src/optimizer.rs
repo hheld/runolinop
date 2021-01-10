@@ -1,4 +1,4 @@
-use crate::{vec_utils, ObjectiveSense, NLP};
+use crate::{vec_utils, NLP};
 use nalgebra::{DMatrix, DVector};
 
 #[allow(dead_code)]
@@ -31,21 +31,14 @@ impl<Nlp: NLP> Optimizer<Nlp> for SteepestDescent {
             x_current: nlp.initial_guess(),
             x_previous: nlp.initial_guess(),
             objective_current: 0.0,
-            objective_previous: match nlp_info.sense {
-                ObjectiveSense::Min => f64::INFINITY,
-                ObjectiveSense::Max => f64::NEG_INFINITY,
-            },
+            objective_previous: f64::INFINITY,
             objective_grad: vec![f64::INFINITY; nlp_info.num_variables as usize],
             direction_scale_factor: 1.0,
         }
     }
 
-    fn iterate(&mut self, nlp: &Nlp, context: &mut OptContext) -> StepDirection {
-        let nlp_info = nlp.info();
-        match nlp_info.sense {
-            ObjectiveSense::Min => vec_utils::scaled(&context.objective_grad, -1.0),
-            ObjectiveSense::Max => context.objective_grad.clone(),
-        }
+    fn iterate(&mut self, _nlp: &Nlp, context: &mut OptContext) -> StepDirection {
+        vec_utils::scaled(&context.objective_grad, -1.0)
     }
 
     fn done(&self, context: &OptContext) -> bool {
@@ -59,7 +52,6 @@ pub struct Bfgs {
     d_k: DVector<f64>,
     H: DMatrix<f64>,
     n: u32,
-    sense_factor: f64,
 }
 
 impl Bfgs {
@@ -69,20 +61,10 @@ impl Bfgs {
         let n = nlp.info().num_variables;
         let H = DMatrix::<f64>::identity(n as usize, n as usize);
         let g_k = DVector::<f64>::from_vec(nlp.grad_objective(&initial_point));
-        let sense_factor = match nlp.info().sense {
-            ObjectiveSense::Min => -1.0,
-            ObjectiveSense::Max => 1.0,
-        };
 
-        let d_k = sense_factor * &H * &g_k;
+        let d_k = -&H * &g_k;
 
-        Bfgs {
-            g_k,
-            d_k,
-            H,
-            n,
-            sense_factor,
-        }
+        Bfgs { g_k, d_k, H, n }
     }
 }
 
@@ -95,10 +77,7 @@ impl<Nlp: NLP> Optimizer<Nlp> for Bfgs {
             x_current: nlp.initial_guess(),
             x_previous: nlp.initial_guess(),
             objective_current: 0.0,
-            objective_previous: match nlp_info.sense {
-                ObjectiveSense::Min => f64::INFINITY,
-                ObjectiveSense::Max => f64::NEG_INFINITY,
-            },
+            objective_previous: f64::INFINITY,
             objective_grad: vec![f64::INFINITY; nlp_info.num_variables as usize],
             direction_scale_factor: 1.0,
         }
@@ -117,7 +96,7 @@ impl<Nlp: NLP> Optimizer<Nlp> for Bfgs {
         self.g_k = g_k_next;
 
         let mut H_q_k = DVector::<f64>::zeros(self.n as usize);
-        H_q_k.sygemv(-self.sense_factor, &self.H, &q_k, 0.);
+        H_q_k.sygemv(1.0, &self.H, &q_k, 0.);
 
         let p_k_q_k = p_k.dot(&q_k);
 
@@ -130,7 +109,7 @@ impl<Nlp: NLP> Optimizer<Nlp> for Bfgs {
         self.H.ger(-1. / p_k_q_k, &p_k, &H_q_k, 1.);
         self.H.ger(-1. / p_k_q_k, &H_q_k, &p_k, 1.);
 
-        self.d_k.sygemv(self.sense_factor, &self.H, &self.g_k, 0.);
+        self.d_k.sygemv(-1.0, &self.H, &self.g_k, 0.);
 
         self.d_k.as_slice().to_vec()
     }

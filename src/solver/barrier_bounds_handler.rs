@@ -1,8 +1,7 @@
-use crate::{ObjectiveSense, VariableBounds};
+use crate::VariableBounds;
 
 pub struct BarrierBoundsHandler<'a> {
     pub bounds: &'a [VariableBounds],
-    pub sense: &'a ObjectiveSense,
     pub barrier_parameter: f64,
     pub barrier_decrease_factor: f64,
 }
@@ -22,11 +21,7 @@ impl BarrierBoundsHandler<'_> {
                     barrier_term -= self.barrier_parameter * (bounds.ub - x).ln();
                 }
 
-                sum + barrier_term
-                    * match self.sense {
-                        ObjectiveSense::Min => -1.0,
-                        ObjectiveSense::Max => 1.0,
-                    }
+                sum - barrier_term
             })
     }
 
@@ -46,12 +41,7 @@ impl BarrierBoundsHandler<'_> {
                     grad_barrier_term -= self.barrier_parameter * (1.0 / (bounds.ub - x));
                 }
 
-                grad_obj
-                    + grad_barrier_term
-                        * match self.sense {
-                            ObjectiveSense::Min => -1.0,
-                            ObjectiveSense::Max => 1.0,
-                        }
+                grad_obj - grad_barrier_term
             })
             .collect()
     }

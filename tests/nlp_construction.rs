@@ -11,7 +11,6 @@ fn nlp_definition() {
             num_variables: 1,
             num_inequality_constraints: 0,
             num_equality_constraints: 0,
-            sense: ObjectiveSense::Min,
         },
     };
 

@@ -87,7 +87,6 @@ where
                 &mut context.x_current,
                 &context.objective_grad,
                 &d,
-                &self.nlp.info().sense,
             );
 
             context.objective_current = step_info.obj_value;
@@ -135,7 +134,7 @@ impl fmt::Display for Solution {
 mod tests {
     use crate::optimizer::{Bfgs, SteepestDescent};
     use crate::step_size_control::ArmijoGoldsteinRule;
-    use crate::{NlpInfo, ObjectiveSense, VariableBounds};
+    use crate::{NlpInfo, VariableBounds};
 
     use super::*;
     use crate::output::StdoutLogger;
@@ -153,7 +152,6 @@ mod tests {
                 num_variables: 1,
                 num_inequality_constraints: 0,
                 num_equality_constraints: 0,
-                sense: ObjectiveSense::Min,
             },
         };
 
@@ -187,7 +185,6 @@ mod tests {
             optimizer: &mut optimizer,
             bounds_handler: BarrierBoundsHandler {
                 bounds: &nlp.bounds(),
-                sense: &nlp.info().sense,
                 barrier_parameter: 1.0E-6,
                 barrier_decrease_factor: 0.5,
             },
@@ -195,7 +192,6 @@ mod tests {
                 mu: &mut vec![0.0; nlp.info().num_variables as usize],
                 lambda: &mut vec![0.0; nlp.info.num_variables as usize],
                 c: 1.0,
-                sense: &ObjectiveSense::Min,
             },
             logger: vec![StdoutLogger::new(1)],
         };
@@ -204,72 +200,6 @@ mod tests {
 
         println!("solution: {}", solution);
         assert!((solution.best_solution[0] - nlp.bounds()[0].lb).abs() < 1.0E-8);
-    }
-
-    #[test]
-    fn max_unconstrained_steepest_descent() {
-        let step_rule = ArmijoGoldsteinRule::new(1., 0.95, 0.01);
-
-        struct MinXSquared {
-            info: NlpInfo,
-        };
-
-        let nlp = MinXSquared {
-            info: NlpInfo {
-                num_variables: 1,
-                num_inequality_constraints: 0,
-                num_equality_constraints: 0,
-                sense: ObjectiveSense::Max,
-            },
-        };
-
-        impl NLP for MinXSquared {
-            fn info(&self) -> &NlpInfo {
-                &self.info
-            }
-
-            fn bounds(&self) -> Vec<VariableBounds> {
-                vec![VariableBounds { lb: 1.1, ub: 3.213 }]
-            }
-
-            fn objective(&self, xs: &[f64]) -> f64 {
-                xs[0].powi(2)
-            }
-
-            fn grad_objective(&self, xs: &[f64]) -> Vec<f64> {
-                vec![2.0 * xs[0]]
-            }
-
-            fn initial_guess(&self) -> Vec<f64> {
-                vec![2.0]
-            }
-        }
-
-        let mut optimizer = SteepestDescent {};
-
-        let mut solver = Solver {
-            nlp: &nlp,
-            step_size_control: &step_rule,
-            optimizer: &mut optimizer,
-            bounds_handler: BarrierBoundsHandler {
-                bounds: &nlp.bounds(),
-                sense: &nlp.info().sense,
-                barrier_parameter: 1.0E-6,
-                barrier_decrease_factor: 0.5,
-            },
-            constraints_handler: AugmentedLagrangianConstraintHandler {
-                mu: &mut vec![0.0; nlp.info().num_variables as usize],
-                lambda: &mut vec![0.0; nlp.info.num_variables as usize],
-                c: 1.0,
-                sense: &ObjectiveSense::Min,
-            },
-            logger: vec![StdoutLogger::new(1)],
-        };
-
-        let solution = solver.solve();
-
-        println!("solution: {}", solution);
-        assert!((solution.best_solution[0] - nlp.bounds()[0].ub).abs() < 1.0E-8);
     }
 
     #[test]
@@ -285,7 +215,6 @@ mod tests {
                 num_variables: 1,
                 num_inequality_constraints: 0,
                 num_equality_constraints: 0,
-                sense: ObjectiveSense::Min,
             },
         };
 
@@ -319,7 +248,6 @@ mod tests {
             optimizer: &mut optimizer,
             bounds_handler: BarrierBoundsHandler {
                 bounds: &nlp.bounds(),
-                sense: &nlp.info().sense,
                 barrier_parameter: 1.0E-6,
                 barrier_decrease_factor: 0.5,
             },
@@ -327,7 +255,6 @@ mod tests {
                 mu: &mut vec![0.0; nlp.info().num_variables as usize],
                 lambda: &mut vec![0.0; nlp.info.num_variables as usize],
                 c: 1.0,
-                sense: &ObjectiveSense::Min,
             },
             logger: vec![StdoutLogger::new(1)],
         };
@@ -336,71 +263,5 @@ mod tests {
 
         println!("solution: {}", solution);
         assert!((solution.best_solution[0] - nlp.bounds()[0].lb).abs() < 1.0E-8);
-    }
-
-    #[test]
-    fn max_unconstrained_bfgs() {
-        let step_rule = ArmijoGoldsteinRule::new(1., 0.95, 0.01);
-
-        struct MinXSquared {
-            info: NlpInfo,
-        };
-
-        let nlp = MinXSquared {
-            info: NlpInfo {
-                num_variables: 1,
-                num_inequality_constraints: 0,
-                num_equality_constraints: 0,
-                sense: ObjectiveSense::Max,
-            },
-        };
-
-        impl NLP for MinXSquared {
-            fn info(&self) -> &NlpInfo {
-                &self.info
-            }
-
-            fn bounds(&self) -> Vec<VariableBounds> {
-                vec![VariableBounds { lb: 1.1, ub: 3.213 }]
-            }
-
-            fn objective(&self, xs: &[f64]) -> f64 {
-                xs[0].powi(2)
-            }
-
-            fn grad_objective(&self, xs: &[f64]) -> Vec<f64> {
-                vec![2.0 * xs[0]]
-            }
-
-            fn initial_guess(&self) -> Vec<f64> {
-                vec![2.0]
-            }
-        }
-
-        let mut optimizer = Bfgs::new(&nlp);
-
-        let mut solver = Solver {
-            nlp: &nlp,
-            step_size_control: &step_rule,
-            optimizer: &mut optimizer,
-            bounds_handler: BarrierBoundsHandler {
-                bounds: &nlp.bounds(),
-                sense: &nlp.info().sense,
-                barrier_parameter: 1.0E-6,
-                barrier_decrease_factor: 0.5,
-            },
-            constraints_handler: AugmentedLagrangianConstraintHandler {
-                mu: &mut vec![0.0; nlp.info().num_variables as usize],
-                lambda: &mut vec![0.0; nlp.info.num_variables as usize],
-                c: 1.0,
-                sense: &ObjectiveSense::Min,
-            },
-            logger: vec![StdoutLogger::new(10)],
-        };
-
-        let solution = solver.solve();
-
-        println!("solution: {}", solution);
-        assert!((solution.best_solution[0] - nlp.bounds()[0].ub).abs() < 1.0E-8);
     }
 }
