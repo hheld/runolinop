@@ -18,7 +18,7 @@ impl BarrierBoundsHandler<'_> {
                 }
 
                 if bounds.ub < f64::INFINITY {
-                    barrier_term -= self.barrier_parameter * (bounds.ub - x).ln();
+                    barrier_term += self.barrier_parameter * (bounds.ub - x).ln();
                 }
 
                 sum - barrier_term
@@ -38,7 +38,7 @@ impl BarrierBoundsHandler<'_> {
                 }
 
                 if bounds.ub < f64::INFINITY {
-                    grad_barrier_term -= self.barrier_parameter * (1.0 / (bounds.ub - x));
+                    grad_barrier_term += self.barrier_parameter * (1.0 / (bounds.ub - x));
                 }
 
                 grad_obj - grad_barrier_term
