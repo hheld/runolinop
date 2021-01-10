@@ -1,4 +1,4 @@
-use crate::{vec_utils, NLP};
+use crate::{vec_utils, AugmentedLagrangianConstraintHandler, BarrierBoundsHandler, NLP};
 use nalgebra::{DMatrix, DVector};
 
 #[allow(dead_code)]
@@ -15,7 +15,12 @@ pub struct OptContext {
 pub type StepDirection = Vec<f64>;
 
 pub trait Optimizer<Nlp: NLP> {
-    fn initialize(&mut self, nlp: &Nlp) -> OptContext;
+    fn initialize(
+        &mut self,
+        nlp: &Nlp,
+        bounds_handler: &BarrierBoundsHandler,
+        constraint_handler: &AugmentedLagrangianConstraintHandler,
+    ) -> OptContext;
     fn iterate(&mut self, nlp: &Nlp, context: &mut OptContext) -> StepDirection;
     fn done(&self, context: &OptContext) -> bool;
 }
@@ -23,7 +28,12 @@ pub trait Optimizer<Nlp: NLP> {
 pub struct SteepestDescent {}
 
 impl<Nlp: NLP> Optimizer<Nlp> for SteepestDescent {
-    fn initialize(&mut self, nlp: &Nlp) -> OptContext {
+    fn initialize(
+        &mut self,
+        nlp: &Nlp,
+        _bounds_handler: &BarrierBoundsHandler,
+        _constraint_handler: &AugmentedLagrangianConstraintHandler,
+    ) -> OptContext {
         let nlp_info = nlp.info();
 
         OptContext {
@@ -57,20 +67,48 @@ pub struct Bfgs {
 impl Bfgs {
     #[allow(non_snake_case, dead_code)]
     pub fn new(nlp: &impl NLP) -> Self {
-        let initial_point = nlp.initial_guess();
         let n = nlp.info().num_variables;
         let H = DMatrix::<f64>::identity(n as usize, n as usize);
-        let g_k = DVector::<f64>::from_vec(nlp.grad_objective(&initial_point));
 
-        let d_k = -&H * &g_k;
-
-        Bfgs { g_k, d_k, H, n }
+        Bfgs {
+            g_k: DVector::<f64>::zeros(0),
+            d_k: DVector::<f64>::zeros(0),
+            H,
+            n,
+        }
     }
 }
 
 impl<Nlp: NLP> Optimizer<Nlp> for Bfgs {
-    fn initialize(&mut self, nlp: &Nlp) -> OptContext {
-        let nlp_info = nlp.info();
+    fn initialize(
+        &mut self,
+        nlp: &Nlp,
+        bounds_handler: &BarrierBoundsHandler,
+        constraint_handler: &AugmentedLagrangianConstraintHandler,
+    ) -> OptContext {
+        let initial_point = nlp.initial_guess();
+
+        let g = nlp.inequality_constraints(&initial_point);
+        let h = nlp.equality_constraints(&initial_point);
+        let grad_f = bounds_handler
+            .adapted_objective_gradient(&initial_point, &nlp.grad_objective(&initial_point));
+
+        let objective_grad = constraint_handler.adapted_objective_grad(
+            &grad_f,
+            &g,
+            &nlp.grad_inequality_constraints(&initial_point)
+                .iter()
+                .map(|x| &x[..])
+                .collect::<Vec<_>>(),
+            &h,
+            &nlp.grad_equality_constraints(&initial_point)
+                .iter()
+                .map(|x| &x[..])
+                .collect::<Vec<_>>(),
+        );
+
+        self.g_k = DVector::<f64>::from_vec(objective_grad);
+        self.d_k = -&self.H * &self.g_k;
 
         OptContext {
             iteration: 0,
@@ -78,7 +116,7 @@ impl<Nlp: NLP> Optimizer<Nlp> for Bfgs {
             x_previous: nlp.initial_guess(),
             objective_current: 0.0,
             objective_previous: f64::INFINITY,
-            objective_grad: vec![f64::INFINITY; nlp_info.num_variables as usize],
+            objective_grad: self.g_k.data.as_vec().clone(),
             direction_scale_factor: 1.0,
         }
     }

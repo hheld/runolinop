@@ -37,7 +37,9 @@ where
 {
     #[allow(dead_code)]
     pub fn solve(&mut self) -> Solution {
-        let mut context = self.optimizer.initialize(&self.nlp);
+        let mut context =
+            self.optimizer
+                .initialize(&self.nlp, &self.bounds_handler, &self.constraints_handler);
 
         while !self.optimizer.done(&context) {
             context.objective_previous = context.objective_current;
