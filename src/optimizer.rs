@@ -114,7 +114,7 @@ impl<Nlp: NLP> Optimizer<Nlp> for Bfgs {
             iteration: 0,
             x_current: nlp.initial_guess(),
             x_previous: nlp.initial_guess(),
-            objective_current: 0.0,
+            objective_current: f64::INFINITY,
             objective_previous: f64::INFINITY,
             objective_grad: self.g_k.data.as_vec().clone(),
             direction_scale_factor: 1.0,
