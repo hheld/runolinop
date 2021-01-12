@@ -108,7 +108,7 @@ impl<Nlp: NLP> Optimizer<Nlp> for Bfgs {
         );
 
         self.g_k = DVector::<f64>::from_vec(objective_grad);
-        self.d_k = -&self.H * &self.g_k;
+        self.d_k = -1.0 * &self.g_k;
 
         OptContext {
             iteration: 0,
@@ -116,7 +116,7 @@ impl<Nlp: NLP> Optimizer<Nlp> for Bfgs {
             x_previous: nlp.initial_guess(),
             objective_current: f64::INFINITY,
             objective_previous: f64::INFINITY,
-            objective_grad: self.g_k.data.as_vec().clone(),
+            objective_grad: self.g_k.as_slice().to_vec(),
             direction_scale_factor: 1.0,
         }
     }

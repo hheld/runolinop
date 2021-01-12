@@ -17,6 +17,70 @@ fn grad_f(xs: &[f64]) -> Vec<f64> {
 }
 
 #[test]
+fn upper_bounds_problem() {
+    let step_rule = ArmijoGoldsteinRule::new(5.0, 0.95, 0.1);
+
+    struct Prob {
+        info: NlpInfo,
+    };
+
+    let nlp = Prob {
+        info: NlpInfo {
+            num_variables: 2,
+            num_inequality_constraints: 0,
+            num_equality_constraints: 0,
+        },
+    };
+
+    impl NLP for Prob {
+        fn info(&self) -> &NlpInfo {
+            &self.info
+        }
+
+        fn bounds(&self) -> Vec<VariableBounds> {
+            vec![VariableBounds { lb: 0.0, ub: 3.123 }; self.info.num_variables as usize]
+        }
+
+        fn objective(&self, xs: &[f64]) -> f64 {
+            -f(xs)
+        }
+
+        fn grad_objective(&self, xs: &[f64]) -> Vec<f64> {
+            grad_f(xs).iter().map(|g_f| -g_f).collect()
+        }
+
+        fn initial_guess(&self) -> Vec<f64> {
+            vec![1.0; self.info.num_variables as usize]
+        }
+    }
+
+    let mut optimizer = Bfgs::new(&nlp);
+    let mut solver = Solver {
+        nlp: &nlp,
+        step_size_control: &step_rule,
+        optimizer: &mut optimizer,
+        bounds_handler: BarrierBoundsHandler {
+            bounds: &nlp.bounds(),
+            barrier_parameter: 1.0,
+            barrier_decrease_factor: 0.5,
+        },
+        constraints_handler: AugmentedLagrangianConstraintHandler {
+            mu: &mut vec![0.0; nlp.info().num_variables as usize],
+            lambda: &mut vec![0.0; nlp.info.num_variables as usize],
+            c: 1.0E9,
+        },
+        logger: vec![StdoutLogger::new(1)],
+    };
+
+    let solution = solver.solve();
+    println!("solution: {}", solution);
+
+    for best_x in solution.best_solution {
+        assert!((best_x - 3.123).abs() < 1.0E-3);
+    }
+}
+
+#[test]
 fn inequality_constrained_min_problem() {
     let step_rule = ArmijoGoldsteinRule::new(1., 0.5, 0.2);
 

@@ -43,7 +43,6 @@ where
 
         while !self.optimizer.done(&context) {
             context.objective_previous = context.objective_current;
-            context.x_previous = context.x_current.clone();
             context.iteration += 1;
 
             let g = self.nlp.inequality_constraints(&context.x_current);
@@ -72,6 +71,7 @@ where
             );
 
             let d = self.optimizer.iterate(self.nlp, &mut context);
+            context.x_previous = context.x_current.clone();
 
             if norm2_sqr(&d) < 1.0E-10 {
                 break;

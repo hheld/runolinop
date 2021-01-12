@@ -14,14 +14,14 @@ impl BarrierBoundsHandler<'_> {
                 let mut barrier_term = 0.0;
 
                 if bounds.lb > f64::NEG_INFINITY {
-                    barrier_term += self.barrier_parameter * (x - bounds.lb).ln();
+                    barrier_term -= self.barrier_parameter * (x - bounds.lb).ln();
                 }
 
                 if bounds.ub < f64::INFINITY {
-                    barrier_term += self.barrier_parameter * (bounds.ub - x).ln();
+                    barrier_term -= self.barrier_parameter * (bounds.ub - x).ln();
                 }
 
-                sum - barrier_term
+                sum + barrier_term
             })
     }
 
@@ -34,14 +34,14 @@ impl BarrierBoundsHandler<'_> {
                 let mut grad_barrier_term = 0.0;
 
                 if bounds.lb > f64::NEG_INFINITY {
-                    grad_barrier_term += self.barrier_parameter * (1.0 / (x - bounds.lb));
+                    grad_barrier_term -= self.barrier_parameter * (1.0 / (x - bounds.lb));
                 }
 
                 if bounds.ub < f64::INFINITY {
-                    grad_barrier_term -= self.barrier_parameter * (1.0 / (bounds.ub - x));
+                    grad_barrier_term += self.barrier_parameter * (1.0 / (bounds.ub - x));
                 }
 
-                grad_obj - grad_barrier_term
+                grad_obj + grad_barrier_term
             })
             .collect()
     }
