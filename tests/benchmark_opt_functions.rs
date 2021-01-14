@@ -1,7 +1,4 @@
-use runolinop::{
-    ArmijoGoldsteinRule, AugmentedLagrangianConstraintHandler, BarrierBoundsHandler, Bfgs, NlpInfo,
-    Solver, StdoutLogger, VariableBounds, NLP,
-};
+use runolinop::{NlpInfo, Solver, VariableBounds, NLP};
 
 fn rosenbrock(xs: &[f64], n: usize) -> f64 {
     let mut sum = 0.0;
@@ -26,8 +23,6 @@ fn grad_rosenbrock(xs: &[f64], n: usize) -> Vec<f64> {
 
 #[test]
 fn rosenbrock_bfgs_benchmark() {
-    let step_rule = ArmijoGoldsteinRule::new(1., 0.5, 0.2);
-
     struct Rosenbrock {
         info: NlpInfo,
     };
@@ -68,23 +63,7 @@ fn rosenbrock_bfgs_benchmark() {
         }
     }
 
-    let mut optimizer = Bfgs::new(&nlp);
-    let mut solver = Solver {
-        nlp: &nlp,
-        step_size_control: &step_rule,
-        optimizer: &mut optimizer,
-        bounds_handler: BarrierBoundsHandler {
-            bounds: &nlp.bounds(),
-            barrier_parameter: 1.0E-6,
-            barrier_decrease_factor: 0.5,
-        },
-        constraints_handler: AugmentedLagrangianConstraintHandler {
-            mu: &mut vec![0.0; nlp.info().num_variables as usize],
-            lambda: &mut vec![0.0; nlp.info.num_variables as usize],
-            c: 1.0,
-        },
-        logger: vec![StdoutLogger::new(100)],
-    };
+    let mut solver = Solver::new(&nlp);
 
     let solution = solver.solve();
     println!("solution: {}", solution);

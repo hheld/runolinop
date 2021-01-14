@@ -1,12 +1,12 @@
 use crate::VariableBounds;
 
-pub struct BarrierBoundsHandler<'a> {
-    pub bounds: &'a [VariableBounds],
+pub struct BarrierBoundsHandler {
+    pub bounds: Vec<VariableBounds>,
     pub barrier_parameter: f64,
     pub barrier_decrease_factor: f64,
 }
 
-impl BarrierBoundsHandler<'_> {
+impl BarrierBoundsHandler {
     pub fn adapted_objective_value(&self, xs: &[f64], pure_objective_value: f64) -> f64 {
         xs.iter()
             .zip(self.bounds.iter())

@@ -1,13 +1,13 @@
 use crate::vec_utils::{inner_product, norm2_sqr};
 
 #[allow(dead_code)]
-pub struct AugmentedLagrangianConstraintHandler<'a> {
-    pub mu: &'a mut [f64],
-    pub lambda: &'a mut [f64],
+pub struct AugmentedLagrangianConstraintHandler {
+    pub mu: Vec<f64>,
+    pub lambda: Vec<f64>,
     pub c: f64,
 }
 
-impl AugmentedLagrangianConstraintHandler<'_> {
+impl AugmentedLagrangianConstraintHandler {
     #[allow(dead_code)]
     fn inequality_penalization(&self, t: f64, mu: f64) -> f64 {
         0.5 / self.c * (0.0_f64.max(mu + self.c * t).powi(2) - mu.powi(2))
@@ -18,7 +18,7 @@ impl AugmentedLagrangianConstraintHandler<'_> {
         let mut obj = f;
 
         if h.len() > 0 {
-            obj += inner_product(self.lambda, h).unwrap() + 0.5 * self.c * norm2_sqr(h);
+            obj += inner_product(&self.lambda, h).unwrap() + 0.5 * self.c * norm2_sqr(h);
         }
 
         obj += self.mu.iter().zip(g.iter()).fold(0.0, |sum, (mu, g)| {

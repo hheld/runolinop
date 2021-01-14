@@ -1,7 +1,4 @@
-use runolinop::{
-    ArmijoGoldsteinRule, AugmentedLagrangianConstraintHandler, BarrierBoundsHandler, Bfgs, NlpInfo,
-    Solver, StdoutLogger, VariableBounds, NLP,
-};
+use runolinop::{NlpInfo, Solver, VariableBounds, NLP};
 
 fn f(xs: &[f64]) -> f64 {
     xs[0].powi(2) + xs[1].powi(2)
@@ -18,8 +15,6 @@ fn grad_f(xs: &[f64]) -> Vec<f64> {
 
 #[test]
 fn upper_bounds_problem() {
-    let step_rule = ArmijoGoldsteinRule::new(5.0, 0.95, 0.1);
-
     struct Prob {
         info: NlpInfo,
     };
@@ -54,23 +49,7 @@ fn upper_bounds_problem() {
         }
     }
 
-    let mut optimizer = Bfgs::new(&nlp);
-    let mut solver = Solver {
-        nlp: &nlp,
-        step_size_control: &step_rule,
-        optimizer: &mut optimizer,
-        bounds_handler: BarrierBoundsHandler {
-            bounds: &nlp.bounds(),
-            barrier_parameter: 1.0,
-            barrier_decrease_factor: 0.5,
-        },
-        constraints_handler: AugmentedLagrangianConstraintHandler {
-            mu: &mut vec![0.0; nlp.info().num_variables as usize],
-            lambda: &mut vec![0.0; nlp.info.num_variables as usize],
-            c: 1.0E9,
-        },
-        logger: vec![StdoutLogger::new(1)],
-    };
+    let mut solver = Solver::new(&nlp);
 
     let solution = solver.solve();
     println!("solution: {}", solution);
@@ -82,8 +61,6 @@ fn upper_bounds_problem() {
 
 #[test]
 fn inequality_constrained_min_problem() {
-    let step_rule = ArmijoGoldsteinRule::new(1., 0.5, 0.2);
-
     struct Prob {
         info: NlpInfo,
     };
@@ -132,23 +109,7 @@ fn inequality_constrained_min_problem() {
         }
     }
 
-    let mut optimizer = Bfgs::new(&nlp);
-    let mut solver = Solver {
-        nlp: &nlp,
-        step_size_control: &step_rule,
-        optimizer: &mut optimizer,
-        bounds_handler: BarrierBoundsHandler {
-            bounds: &nlp.bounds(),
-            barrier_parameter: 1.0E-6,
-            barrier_decrease_factor: 0.5,
-        },
-        constraints_handler: AugmentedLagrangianConstraintHandler {
-            mu: &mut vec![0.0; nlp.info().num_variables as usize],
-            lambda: &mut vec![0.0; nlp.info.num_variables as usize],
-            c: 1.0E9,
-        },
-        logger: vec![StdoutLogger::new(1)],
-    };
+    let mut solver = Solver::new(&nlp);
 
     let solution = solver.solve();
     println!("solution: {}", solution);
@@ -162,8 +123,6 @@ fn inequality_constrained_min_problem() {
 
 #[test]
 fn equality_constrained_min_problem() {
-    let step_rule = ArmijoGoldsteinRule::new(100.0, 0.5, 0.2);
-
     struct Prob {
         info: NlpInfo,
     };
@@ -212,23 +171,7 @@ fn equality_constrained_min_problem() {
         }
     }
 
-    let mut optimizer = Bfgs::new(&nlp);
-    let mut solver = Solver {
-        nlp: &nlp,
-        step_size_control: &step_rule,
-        optimizer: &mut optimizer,
-        bounds_handler: BarrierBoundsHandler {
-            bounds: &nlp.bounds(),
-            barrier_parameter: 1.0E-6,
-            barrier_decrease_factor: 0.5,
-        },
-        constraints_handler: AugmentedLagrangianConstraintHandler {
-            mu: &mut vec![0.0; nlp.info().num_inequality_constraints as usize],
-            lambda: &mut vec![0.0; nlp.info().num_equality_constraints as usize],
-            c: 10.0,
-        },
-        logger: vec![StdoutLogger::new(1)],
-    };
+    let mut solver = Solver::new(&nlp);
 
     let solution = solver.solve();
     println!("solution: {}", solution);

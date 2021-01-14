@@ -7,7 +7,7 @@ use crate::optimizer::Optimizer;
 use crate::output::SolverLogger;
 use crate::step_size_control::StepSizeControl;
 use crate::vec_utils::norm2_sqr;
-use crate::NLP;
+use crate::{ArmijoGoldsteinRule, Bfgs, StdoutLogger, NLP};
 
 mod augmented_lagrangian_constraint_handler;
 mod barrier_bounds_handler;
@@ -20,12 +20,36 @@ where
     O: Optimizer<N>,
     L: SolverLogger,
 {
-    pub nlp: &'a N,
-    pub step_size_control: &'a S,
-    pub optimizer: &'a mut O,
-    pub bounds_handler: BarrierBoundsHandler<'a>,
-    pub constraints_handler: AugmentedLagrangianConstraintHandler<'a>,
-    pub logger: Vec<L>,
+    nlp: &'a N,
+    step_size_control: S,
+    optimizer: O,
+    bounds_handler: BarrierBoundsHandler,
+    constraints_handler: AugmentedLagrangianConstraintHandler,
+    logger: Vec<L>,
+}
+
+impl<'a, N> Solver<'a, N, ArmijoGoldsteinRule, Bfgs, StdoutLogger>
+where
+    N: NLP,
+{
+    pub fn new(nlp: &'a N) -> Self {
+        Self {
+            nlp: &nlp,
+            step_size_control: ArmijoGoldsteinRule::new(100.0, 0.5, 0.2),
+            optimizer: Bfgs::new(nlp),
+            bounds_handler: BarrierBoundsHandler {
+                bounds: nlp.bounds(),
+                barrier_parameter: 1.0E-6,
+                barrier_decrease_factor: 0.5,
+            },
+            constraints_handler: AugmentedLagrangianConstraintHandler {
+                mu: vec![0.0; nlp.info().num_inequality_constraints as usize],
+                lambda: vec![0.0; nlp.info().num_equality_constraints as usize],
+                c: 10.0,
+            },
+            logger: vec![StdoutLogger::new(1)],
+        }
+    }
 }
 
 impl<N, S, O, L> Solver<'_, N, S, O, L>
@@ -179,20 +203,20 @@ mod tests {
             }
         }
 
-        let mut optimizer = SteepestDescent {};
+        let optimizer = SteepestDescent {};
 
         let mut solver = Solver {
             nlp: &nlp,
-            step_size_control: &step_rule,
-            optimizer: &mut optimizer,
+            step_size_control: step_rule,
+            optimizer,
             bounds_handler: BarrierBoundsHandler {
-                bounds: &nlp.bounds(),
+                bounds: nlp.bounds(),
                 barrier_parameter: 1.0E-6,
                 barrier_decrease_factor: 0.5,
             },
             constraints_handler: AugmentedLagrangianConstraintHandler {
-                mu: &mut vec![0.0; nlp.info().num_variables as usize],
-                lambda: &mut vec![0.0; nlp.info.num_variables as usize],
+                mu: vec![0.0; nlp.info().num_variables as usize],
+                lambda: vec![0.0; nlp.info.num_variables as usize],
                 c: 1.0,
             },
             logger: vec![StdoutLogger::new(1)],
@@ -242,20 +266,20 @@ mod tests {
             }
         }
 
-        let mut optimizer = Bfgs::new(&nlp);
+        let optimizer = Bfgs::new(&nlp);
 
         let mut solver = Solver {
             nlp: &nlp,
-            step_size_control: &step_rule,
-            optimizer: &mut optimizer,
+            step_size_control: step_rule,
+            optimizer,
             bounds_handler: BarrierBoundsHandler {
-                bounds: &nlp.bounds(),
+                bounds: nlp.bounds(),
                 barrier_parameter: 1.0E-6,
                 barrier_decrease_factor: 0.5,
             },
             constraints_handler: AugmentedLagrangianConstraintHandler {
-                mu: &mut vec![0.0; nlp.info().num_variables as usize],
-                lambda: &mut vec![0.0; nlp.info.num_variables as usize],
+                mu: vec![0.0; nlp.info().num_variables as usize],
+                lambda: vec![0.0; nlp.info.num_variables as usize],
                 c: 1.0,
             },
             logger: vec![StdoutLogger::new(1)],
