@@ -33,9 +33,10 @@ impl SolverLogger for StdoutLogger {
                     || (ignore_frequency && self.last_output_iteration != context.iteration)
                 {
                     println!(
-                        "iteration {:5} | objective {:14.8} | change: {:14.8}",
+                        "iteration {:5} | objective {:20.8} (actual: {:14.8}) | change: {:14.8}",
                         context.iteration,
                         context.objective_current,
+                        context.pure_objective,
                         (context.objective_current - context.objective_previous).abs()
                     );
 

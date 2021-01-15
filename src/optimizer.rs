@@ -8,6 +8,7 @@ pub struct OptContext {
     pub x_previous: Vec<f64>,
     pub objective_current: f64,
     pub objective_previous: f64,
+    pub pure_objective: f64,
     pub objective_grad: Vec<f64>,
     pub direction_scale_factor: f64,
 }
@@ -40,8 +41,9 @@ impl<Nlp: NLP> Optimizer<Nlp> for SteepestDescent {
             iteration: 0,
             x_current: nlp.initial_guess(),
             x_previous: nlp.initial_guess(),
-            objective_current: 0.0,
+            objective_current: f64::INFINITY,
             objective_previous: f64::INFINITY,
+            pure_objective: f64::INFINITY,
             objective_grad: vec![f64::INFINITY; nlp_info.num_variables as usize],
             direction_scale_factor: 1.0,
         }
@@ -116,6 +118,7 @@ impl<Nlp: NLP> Optimizer<Nlp> for Bfgs {
             x_previous: nlp.initial_guess(),
             objective_current: f64::INFINITY,
             objective_previous: f64::INFINITY,
+            pure_objective: f64::INFINITY,
             objective_grad: self.g_k.as_slice().to_vec(),
             direction_scale_factor: 1.0,
         }
@@ -173,6 +176,7 @@ mod tests {
             x_previous,
             objective_current: obj,
             objective_previous: 0.0,
+            pure_objective: 0.0,
             objective_grad: vec![4.4, 5.5, 6.6],
             direction_scale_factor: 1.0,
         };

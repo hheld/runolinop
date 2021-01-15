@@ -120,6 +120,7 @@ where
                 &d,
             );
 
+            context.pure_objective = self.nlp.objective(&context.x_current);
             context.objective_current = step_info.obj_value;
             context.direction_scale_factor = step_info.direction_scale_factor;
 
@@ -139,7 +140,7 @@ where
         }
 
         Solution {
-            best_objective_value: context.objective_current,
+            best_objective_value: context.pure_objective,
             best_solution: context.x_current,
             num_iterations: context.iteration,
         }
