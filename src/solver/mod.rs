@@ -4,6 +4,7 @@ pub use augmented_lagrangian_constraint_handler::AugmentedLagrangianConstraintHa
 pub use barrier_bounds_handler::BarrierBoundsHandler;
 
 use crate::optimizer::Optimizer;
+use crate::options::Options;
 use crate::output::SolverLogger;
 use crate::step_size_control::StepSizeControl;
 use crate::vec_utils::norm2_sqr;
@@ -32,22 +33,26 @@ impl<'a, N> Solver<'a, N, ArmijoGoldsteinRule, Bfgs, StdoutLogger>
 where
     N: NLP,
 {
-    pub fn new(nlp: &'a N) -> Self {
+    pub fn new(nlp: &'a N, options: Options) -> Self {
         Self {
             nlp: &nlp,
-            step_size_control: ArmijoGoldsteinRule::new(100.0, 0.5, 0.2),
+            step_size_control: ArmijoGoldsteinRule::new(
+                options.step_size_control.alpha_0,
+                options.step_size_control.tau,
+                options.step_size_control.c,
+            ),
             optimizer: Bfgs::new(nlp),
             bounds_handler: BarrierBoundsHandler {
                 bounds: nlp.bounds(),
-                barrier_parameter: 1.0E-6,
-                barrier_decrease_factor: 0.5,
+                barrier_parameter: options.bounds_handler.barrier_parameter,
+                barrier_decrease_factor: options.bounds_handler.barrier_decrease_factor,
             },
             constraints_handler: AugmentedLagrangianConstraintHandler {
                 mu: vec![0.0; nlp.info().num_inequality_constraints as usize],
                 lambda: vec![0.0; nlp.info().num_equality_constraints as usize],
-                c: 10.0,
+                c: options.constraints_handler.c,
             },
-            logger: vec![StdoutLogger::new(1)],
+            logger: vec![StdoutLogger::new(options.logger.frequency)],
         }
     }
 }
@@ -159,11 +164,11 @@ impl fmt::Display for Solution {
 #[cfg(test)]
 mod tests {
     use crate::optimizer::{Bfgs, SteepestDescent};
+    use crate::output::StdoutLogger;
     use crate::step_size_control::ArmijoGoldsteinRule;
     use crate::{NlpInfo, VariableBounds};
 
     use super::*;
-    use crate::output::StdoutLogger;
 
     #[test]
     fn min_unconstrained_steepest_descent() {

@@ -1,4 +1,4 @@
-use runolinop::{NlpInfo, Solver, VariableBounds, NLP};
+use runolinop::{NlpInfo, Options, OptionsLogger, Solver, VariableBounds, NLP};
 
 fn rosenbrock(xs: &[f64], n: usize) -> f64 {
     let mut sum = 0.0;
@@ -63,7 +63,16 @@ fn rosenbrock_bfgs_benchmark() {
         }
     }
 
-    let mut solver = Solver::new(&nlp);
+    let mut solver = Solver::new(
+        &nlp,
+        Options {
+            logger: OptionsLogger {
+                frequency: 100,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
 
     let solution = solver.solve();
     println!("solution: {}", solution);

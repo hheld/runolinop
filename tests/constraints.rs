@@ -1,4 +1,6 @@
-use runolinop::{NlpInfo, Solver, VariableBounds, NLP};
+use runolinop::{
+    NlpInfo, Options, OptionsBoundsHandler, OptionsStepSizeControl, Solver, VariableBounds, NLP,
+};
 
 fn f(xs: &[f64]) -> f64 {
     xs[0].powi(2) + xs[1].powi(2)
@@ -49,7 +51,21 @@ fn upper_bounds_problem() {
         }
     }
 
-    let mut solver = Solver::new(&nlp);
+    let mut solver = Solver::new(
+        &nlp,
+        Options {
+            step_size_control: OptionsStepSizeControl {
+                alpha_0: 5.0,
+                tau: 0.95,
+                c: 0.1,
+            },
+            bounds_handler: OptionsBoundsHandler {
+                barrier_parameter: 1.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
 
     let solution = solver.solve();
     println!("solution: {}", solution);
@@ -109,7 +125,7 @@ fn inequality_constrained_min_problem() {
         }
     }
 
-    let mut solver = Solver::new(&nlp);
+    let mut solver = Solver::new(&nlp, Default::default());
 
     let solution = solver.solve();
     println!("solution: {}", solution);
@@ -171,7 +187,16 @@ fn equality_constrained_min_problem() {
         }
     }
 
-    let mut solver = Solver::new(&nlp);
+    let mut solver = Solver::new(
+        &nlp,
+        Options {
+            step_size_control: OptionsStepSizeControl {
+                alpha_0: 100.0,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
 
     let solution = solver.solve();
     println!("solution: {}", solution);
