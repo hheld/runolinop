@@ -177,7 +177,7 @@ mod tests {
 
         struct MinXSquared {
             info: NlpInfo,
-        };
+        }
 
         let nlp = MinXSquared {
             info: NlpInfo {
@@ -240,7 +240,7 @@ mod tests {
 
         struct MinXSquared {
             info: NlpInfo,
-        };
+        }
 
         let nlp = MinXSquared {
             info: NlpInfo {

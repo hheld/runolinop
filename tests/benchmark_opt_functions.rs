@@ -25,7 +25,7 @@ fn grad_rosenbrock(xs: &[f64], n: usize) -> Vec<f64> {
 fn rosenbrock_bfgs_benchmark() {
     struct Rosenbrock {
         info: NlpInfo,
-    };
+    }
 
     let nlp = Rosenbrock {
         info: NlpInfo {

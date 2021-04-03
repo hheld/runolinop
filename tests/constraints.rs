@@ -19,7 +19,7 @@ fn grad_f(xs: &[f64]) -> Vec<f64> {
 fn upper_bounds_problem() {
     struct Prob {
         info: NlpInfo,
-    };
+    }
 
     let nlp = Prob {
         info: NlpInfo {
@@ -79,7 +79,7 @@ fn upper_bounds_problem() {
 fn inequality_constrained_min_problem() {
     struct Prob {
         info: NlpInfo,
-    };
+    }
 
     let nlp = Prob {
         info: NlpInfo {
@@ -141,7 +141,7 @@ fn inequality_constrained_min_problem() {
 fn equality_constrained_min_problem() {
     struct Prob {
         info: NlpInfo,
-    };
+    }
 
     let nlp = Prob {
         info: NlpInfo {

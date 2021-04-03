@@ -4,7 +4,7 @@ use runolinop::*;
 fn nlp_definition() {
     struct MinXSquared {
         info: NlpInfo,
-    };
+    }
 
     let nlp = MinXSquared {
         info: NlpInfo {
